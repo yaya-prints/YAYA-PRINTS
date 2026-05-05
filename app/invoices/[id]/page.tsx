@@ -432,33 +432,33 @@ export default function ProfessionalPrintableInvoice() {
       {/* COMMAND BAR */}
       <div className="w-full max-w-[210mm] mb-8 flex flex-col gap-3 print:hidden px-2 sm:px-0 mt-4">
         
-        <div className="w-full flex justify-between items-center mb-2">
-            <button onClick={() => router.back()} className={`text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] transition ${isLightMode ? 'hover:text-slate-900' : 'hover:text-white'}`}>
-              ← Return to Dashboard
+        <div className="w-full flex justify-between items-center mb-2 gap-2">
+            <button onClick={() => router.back()} className={`text-slate-500 text-[11px] sm:text-[10px] font-black uppercase tracking-widest sm:tracking-[0.4em] transition min-h-[40px] flex items-center px-1 active:scale-95 ${isLightMode ? 'hover:text-slate-900' : 'hover:text-white'}`}>
+              ← <span className="hidden sm:inline">Return to Dashboard</span><span className="sm:hidden">Back</span>
             </button>
             <div className="flex gap-2">
               {/* THEME TOGGLE BUTTON */}
-              <button 
+              <button
                 onClick={toggleTheme}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] transition-all border shadow-sm ${
-                  isLightMode 
-                    ? 'bg-white border-slate-300 text-slate-800 hover:bg-slate-50' 
+                className={`flex items-center gap-2 px-4 py-3 sm:py-2.5 rounded-full text-[11px] sm:text-[9px] font-black uppercase tracking-widest sm:tracking-[0.2em] transition-all border shadow-sm min-h-[44px] sm:min-h-0 active:scale-95 ${
+                  isLightMode
+                    ? 'bg-white border-slate-300 text-slate-800 hover:bg-slate-50'
                     : 'bg-black border-slate-700 text-white hover:bg-slate-800'
                 }`}
               >
                 {isLightMode ? (
                   <>
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
-                    Dark
+                    <span className="hidden sm:inline">Dark</span>
                   </>
                 ) : (
                   <>
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                    Light
+                    <span className="hidden sm:inline">Light</span>
                   </>
                 )}
               </button>
-              <button onClick={handlePrint} className="bg-emerald-600 text-white px-6 py-2.5 rounded-full font-black uppercase text-[9px] tracking-widest shadow-xl hover:scale-105 transition-all hover:bg-emerald-500 border border-emerald-500">
+              <button onClick={handlePrint} className="bg-emerald-600 text-white px-5 sm:px-6 py-3 sm:py-2.5 rounded-full font-black uppercase text-[11px] sm:text-[9px] tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all hover:bg-emerald-500 border border-emerald-500 min-h-[44px] sm:min-h-0">
                 Export PDF
               </button>
             </div>
@@ -468,27 +468,27 @@ export default function ProfessionalPrintableInvoice() {
           <div className={`${theme.textMuted} text-[10px] font-black uppercase tracking-widest w-full sm:w-[130px] shrink-0 text-center sm:text-left`}>
             Share Invoice:
           </div>
-          <button onClick={sendInvoiceWA} className={`w-full flex-1 py-2.5 rounded-lg font-black uppercase text-[9px] tracking-widest transition-all ${theme.btnPrimaryBg} ${theme.btnPrimaryText}`}>
+          <button onClick={sendInvoiceWA} className={`w-full flex-1 py-3 sm:py-2.5 rounded-lg font-black uppercase text-[11px] sm:text-[9px] tracking-widest transition-all min-h-[44px] sm:min-h-0 active:scale-95 ${theme.btnPrimaryBg} ${theme.btnPrimaryText}`}>
             WhatsApp
           </button>
-          <button onClick={sendInvoiceEmail} className={`w-full flex-1 py-2.5 rounded-lg font-black uppercase text-[9px] tracking-widest transition-all ${theme.btnPrimaryBg} ${theme.btnPrimaryText}`}>
+          <button onClick={sendInvoiceEmail} className={`w-full flex-1 py-3 sm:py-2.5 rounded-lg font-black uppercase text-[11px] sm:text-[9px] tracking-widest transition-all min-h-[44px] sm:min-h-0 active:scale-95 ${theme.btnPrimaryBg} ${theme.btnPrimaryText}`}>
             Email
           </button>
-          <button onClick={() => copyToClipboard(shareUrl, 'Invoice Link')} className={`w-full flex-1 py-2.5 rounded-lg font-black uppercase text-[9px] tracking-widest transition-all ${theme.btnSecondary}`}>
+          <button onClick={() => copyToClipboard(shareUrl, 'Invoice Link')} className={`w-full flex-1 py-3 sm:py-2.5 rounded-lg font-black uppercase text-[11px] sm:text-[9px] tracking-widest transition-all min-h-[44px] sm:min-h-0 active:scale-95 ${theme.btnSecondary}`}>
             Copy Link
           </button>
         </div>
 
         {balanceDue > 0.01 && (
           <div className={`w-full ${theme.reqMoneyBg} p-3 rounded-xl border shadow-2xl flex flex-col sm:flex-row items-center gap-3 transition-colors`}>
-            <div className={`${theme.reqMoneyText} text-[10px] font-black uppercase tracking-widest flex items-center justify-center sm:justify-start w-full sm:w-[130px] shrink-0`}>
+            <div className={`${theme.reqMoneyText} text-[11px] sm:text-[10px] font-black uppercase tracking-widest flex items-center justify-center sm:justify-start w-full sm:w-[130px] shrink-0`}>
               <span className="w-2 h-2 bg-red-500 rounded-full mr-2 animate-pulse"></span>
               Request Money:
             </div>
-            <button onClick={sendPaymentRequestWA} className="w-full flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg font-black uppercase text-[9px] tracking-widest transition-all shadow-md">
+            <button onClick={sendPaymentRequestWA} className="w-full flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-3 sm:py-2.5 rounded-lg font-black uppercase text-[11px] sm:text-[9px] tracking-widest transition-all shadow-md min-h-[44px] sm:min-h-0 active:scale-95">
               Via WhatsApp
             </button>
-            <button onClick={sendPaymentRequestEmail} className="w-full flex-1 bg-sky-600 hover:bg-sky-500 text-white py-2.5 rounded-lg font-black uppercase text-[9px] tracking-widest transition-all shadow-md">
+            <button onClick={sendPaymentRequestEmail} className="w-full flex-1 bg-sky-600 hover:bg-sky-500 text-white py-3 sm:py-2.5 rounded-lg font-black uppercase text-[11px] sm:text-[9px] tracking-widest transition-all shadow-md min-h-[44px] sm:min-h-0 active:scale-95">
               Via Email
             </button>
           </div>

@@ -675,11 +675,11 @@ export default function AccountsReceivable() {
   };
 
   return (
-    <div className={`p-4 md:p-10 max-w-[1600px] mx-auto min-h-screen ${theme.bgMain} ${theme.textMain} font-sans pb-20 md:pb-32 transition-colors duration-300`}>
-      <div className={`flex flex-col md:flex-row justify-between items-start md:items-end mb-8 border-b ${theme.borderLight} pb-6 mt-4 gap-4`}>
-        <div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className={`text-4xl md:text-5xl font-black uppercase tracking-tighter italic leading-none ${theme.textStrong}`}>Accounts Receivable</h1>
+    <div className={`p-3 sm:p-4 md:p-10 max-w-[1600px] mx-auto min-h-screen ${theme.bgMain} ${theme.textMain} font-sans pb-8 md:pb-32 transition-colors duration-300`}>
+      <div className={`flex flex-col md:flex-row justify-between items-start md:items-end mb-5 md:mb-8 border-b ${theme.borderLight} pb-5 md:pb-6 mt-2 md:mt-4 gap-3 md:gap-4`}>
+        <div className="w-full md:w-auto">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <h1 className={`text-2xl sm:text-3xl md:text-5xl font-black uppercase tracking-tighter italic leading-none ${theme.textStrong}`}>Accounts Receivable</h1>
             <span
               className={`text-[8px] font-black uppercase tracking-widest flex items-center gap-1 px-2 py-1 rounded-full border ${
                 syncStatus === 'live'
@@ -694,13 +694,13 @@ export default function AccountsReceivable() {
               {syncStatus === 'live' ? 'Live' : syncStatus === 'polling' ? 'Poll' : '...'}
             </span>
           </div>
-          <p className={`text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] mt-4 ml-1 ${theme.textMuted}`}>
+          <p className={`text-[11px] md:text-[10px] font-black uppercase tracking-widest md:tracking-[0.3em] mt-3 md:mt-4 ml-1 ${theme.textMuted}`}>
             Financial Ledger & Cash Flow
             {lastPaymentDate && <> · Last payment {(lastPaymentDate as Date).toLocaleDateString()}</>}
           </p>
         </div>
         {clientFilter && (
-          <button onClick={() => setClientFilter(null)} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-colors flex items-center gap-2 ${isLightMode ? 'bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100' : 'bg-sky-500/10 border-sky-500/30 text-sky-400 hover:bg-sky-500/20'}`}>
+          <button onClick={() => setClientFilter(null)} className={`w-full md:w-auto px-4 py-3 md:py-2 rounded-lg text-[11px] md:text-[10px] font-black uppercase tracking-widest border transition-colors flex items-center gap-2 justify-center min-h-[44px] md:min-h-0 active:scale-95 ${isLightMode ? 'bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100' : 'bg-sky-500/10 border-sky-500/30 text-sky-400 hover:bg-sky-500/20'}`}>
             <span>👤 {clientFilter}</span>
             <span className="opacity-70">✕ clear</span>
           </button>
@@ -708,18 +708,18 @@ export default function AccountsReceivable() {
       </div>
 
       {/* FINANCIAL KPI GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 mb-8">
-        <div className={`${theme.bgPanel} border ${theme.border} p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-xl dark:shadow-2xl relative overflow-hidden transition-colors`}>
-          <div className={`text-[10px] font-black uppercase tracking-widest mb-2 ${theme.textMuted}`}>Total Booked (Inc. Tax)</div>
-          <div className={`text-4xl md:text-5xl font-black tracking-tighter ${theme.textStrong}`}>${totalReceivables.toFixed(2)}</div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-8 mb-5 md:mb-8">
+        <div className={`${theme.bgPanel} border ${theme.border} p-5 sm:p-6 md:p-8 rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] shadow-xl dark:shadow-2xl relative overflow-hidden transition-colors`}>
+          <div className={`text-[11px] md:text-[10px] font-black uppercase tracking-widest mb-2 ${theme.textMuted}`}>Total Booked (Inc. Tax)</div>
+          <div className={`text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter ${theme.textStrong}`}>${totalReceivables.toFixed(2)}</div>
         </div>
-        <div className={`${theme.bgPanel} border ${theme.border} p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-xl dark:shadow-2xl relative overflow-hidden transition-colors`}>
-          <div className={`text-[10px] font-black uppercase tracking-widest mb-2 ${isLightMode ? 'text-emerald-600' : 'text-emerald-500/60'}`}>Cash Collected</div>
-          <div className={`text-4xl md:text-5xl font-black tracking-tighter ${isLightMode ? 'text-emerald-500' : 'text-emerald-400'}`}>${totalCollected.toFixed(2)}</div>
+        <div className={`${theme.bgPanel} border ${theme.border} p-5 sm:p-6 md:p-8 rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] shadow-xl dark:shadow-2xl relative overflow-hidden transition-colors`}>
+          <div className={`text-[11px] md:text-[10px] font-black uppercase tracking-widest mb-2 ${isLightMode ? 'text-emerald-600' : 'text-emerald-500/60'}`}>Cash Collected</div>
+          <div className={`text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter ${isLightMode ? 'text-emerald-500' : 'text-emerald-400'}`}>${totalCollected.toFixed(2)}</div>
         </div>
-        <div className={`${theme.bgPanel} border ${theme.border} p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-xl dark:shadow-2xl relative overflow-hidden border-b-4 border-b-red-500/50 transition-colors ${isLightMode ? 'bg-red-50' : ''}`}>
-          <div className={`text-[10px] font-black uppercase tracking-widest mb-2 ${isLightMode ? 'text-red-600' : 'text-red-500/60'}`}>Outstanding Balance</div>
-          <div className={`text-4xl md:text-5xl font-black tracking-tighter ${isLightMode ? 'text-red-500' : 'text-red-400'}`}>${totalOutstanding.toFixed(2)}</div>
+        <div className={`${theme.bgPanel} border ${theme.border} p-5 sm:p-6 md:p-8 rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] shadow-xl dark:shadow-2xl relative overflow-hidden border-b-4 border-b-red-500/50 transition-colors ${isLightMode ? 'bg-red-50' : ''}`}>
+          <div className={`text-[11px] md:text-[10px] font-black uppercase tracking-widest mb-2 ${isLightMode ? 'text-red-600' : 'text-red-500/60'}`}>Outstanding Balance</div>
+          <div className={`text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter ${isLightMode ? 'text-red-500' : 'text-red-400'}`}>${totalOutstanding.toFixed(2)}</div>
         </div>
       </div>
 
@@ -786,19 +786,19 @@ export default function AccountsReceivable() {
       {/* FILTER TABS & SEARCH BAR */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
           <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-2 lg:pb-0 w-full lg:w-auto">
-              <button onClick={() => setActiveTab("all")} className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm ${activeTab === 'all' ? (isLightMode ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-black border-white') : (isLightMode ? 'bg-white text-slate-500 border-slate-200' : 'bg-slate-900 text-slate-400 border-slate-700')}`}>
+              <button onClick={() => setActiveTab("all")} className={`px-5 sm:px-6 py-3 sm:py-2.5 rounded-full text-[11px] sm:text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm min-h-[44px] sm:min-h-0 active:scale-95 ${activeTab === 'all' ? (isLightMode ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-black border-white') : (isLightMode ? 'bg-white text-slate-500 border-slate-200' : 'bg-slate-900 text-slate-400 border-slate-700')}`}>
                 All Invoices
               </button>
-              <button onClick={() => setActiveTab("unpaid")} className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm ${activeTab === 'unpaid' ? (isLightMode ? 'bg-rose-100 text-rose-700 border-rose-300' : 'bg-rose-500/20 text-rose-400 border-rose-500/50') : (isLightMode ? 'bg-white text-slate-500 border-slate-200' : 'bg-slate-900 text-slate-400 border-slate-700')}`}>
+              <button onClick={() => setActiveTab("unpaid")} className={`px-5 sm:px-6 py-3 sm:py-2.5 rounded-full text-[11px] sm:text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm min-h-[44px] sm:min-h-0 active:scale-95 ${activeTab === 'unpaid' ? (isLightMode ? 'bg-rose-100 text-rose-700 border-rose-300' : 'bg-rose-500/20 text-rose-400 border-rose-500/50') : (isLightMode ? 'bg-white text-slate-500 border-slate-200' : 'bg-slate-900 text-slate-400 border-slate-700')}`}>
                 Unpaid (0$)
               </button>
-              <button onClick={() => setActiveTab("partial")} className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm ${activeTab === 'partial' ? (isLightMode ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-amber-500/20 text-amber-400 border-amber-500/50') : (isLightMode ? 'bg-white text-slate-500 border-slate-200' : 'bg-slate-900 text-slate-400 border-slate-700')}`}>
+              <button onClick={() => setActiveTab("partial")} className={`px-5 sm:px-6 py-3 sm:py-2.5 rounded-full text-[11px] sm:text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm min-h-[44px] sm:min-h-0 active:scale-95 ${activeTab === 'partial' ? (isLightMode ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-amber-500/20 text-amber-400 border-amber-500/50') : (isLightMode ? 'bg-white text-slate-500 border-slate-200' : 'bg-slate-900 text-slate-400 border-slate-700')}`}>
                 Partially Paid
               </button>
-              <button onClick={() => setActiveTab("past_due")} className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm ${activeTab === 'past_due' ? (isLightMode ? 'bg-red-100 text-red-700 border-red-300' : 'bg-red-500/20 text-red-400 border-red-500/50') : (isLightMode ? 'bg-white text-slate-500 border-slate-200' : 'bg-slate-900 text-slate-400 border-slate-700')}`}>
+              <button onClick={() => setActiveTab("past_due")} className={`px-5 sm:px-6 py-3 sm:py-2.5 rounded-full text-[11px] sm:text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm min-h-[44px] sm:min-h-0 active:scale-95 ${activeTab === 'past_due' ? (isLightMode ? 'bg-red-100 text-red-700 border-red-300' : 'bg-red-500/20 text-red-400 border-red-500/50') : (isLightMode ? 'bg-white text-slate-500 border-slate-200' : 'bg-slate-900 text-slate-400 border-slate-700')}`}>
                 30+ Days Past Due
               </button>
-              <button onClick={() => setActiveTab("paid")} className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm ${activeTab === 'paid' ? (isLightMode ? 'bg-emerald-100 text-emerald-700 border-emerald-300' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50') : (isLightMode ? 'bg-white text-slate-500 border-slate-200' : 'bg-slate-900 text-slate-400 border-slate-700')}`}>
+              <button onClick={() => setActiveTab("paid")} className={`px-5 sm:px-6 py-3 sm:py-2.5 rounded-full text-[11px] sm:text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm min-h-[44px] sm:min-h-0 active:scale-95 ${activeTab === 'paid' ? (isLightMode ? 'bg-emerald-100 text-emerald-700 border-emerald-300' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50') : (isLightMode ? 'bg-white text-slate-500 border-slate-200' : 'bg-slate-900 text-slate-400 border-slate-700')}`}>
                 Fully Paid
               </button>
           </div>

@@ -659,13 +659,13 @@ export default function QuotesList() {
   const staleCount = quotes.filter(isStale).length;
 
   return (
-    <div className={`min-h-screen ${isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#0f1115] text-white'} font-sans p-4 md:p-10 max-w-[1600px] mx-auto pb-20 md:pb-32 transition-colors duration-300`}>
+    <div className={`min-h-screen ${isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#0f1115] text-white'} font-sans p-3 sm:p-4 md:p-10 max-w-[1600px] mx-auto pb-8 md:pb-32 transition-colors duration-300`}>
 
       {/* ============ HEADER ============ */}
-      <div className={`flex flex-col md:flex-row justify-between items-start md:items-end mb-6 md:mb-8 border-b ${isLightMode ? 'border-slate-200' : 'border-white/10'} pb-6 md:pb-8 mt-4 gap-6`}>
-        <div>
-          <div className="flex items-center gap-3 mb-4">
-            <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic leading-none">Quotes & Proposals</h1>
+      <div className={`flex flex-col md:flex-row justify-between items-start md:items-end mb-5 md:mb-8 border-b ${isLightMode ? 'border-slate-200' : 'border-white/10'} pb-5 md:pb-8 mt-2 md:mt-4 gap-4 md:gap-6`}>
+        <div className="w-full md:w-auto">
+          <div className="flex items-center gap-2 sm:gap-3 mb-3 md:mb-4 flex-wrap">
+            <h1 className="text-2xl sm:text-3xl md:text-5xl font-black uppercase tracking-tighter italic leading-none">Quotes & Proposals</h1>
             {/* SYNC STATUS */}
             <span
               className={`text-[8px] font-black uppercase tracking-widest flex items-center gap-1 px-2 py-1 rounded-full border ${
@@ -685,9 +685,9 @@ export default function QuotesList() {
               {syncStatus === 'live' ? 'Live' : syncStatus === 'polling' ? 'Poll' : '...'}
             </span>
           </div>
-          <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] ml-1">Pipeline & Estimations</p>
+          <p className="text-slate-500 text-[11px] md:text-[10px] font-black uppercase tracking-widest md:tracking-[0.3em] ml-1">Pipeline & Estimations</p>
         </div>
-        <Link href="/quotes/new" className="w-full md:w-auto text-center bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white px-8 py-4 md:py-3 rounded-xl font-black uppercase text-[10px] md:text-xs tracking-widest transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">
+        <Link href="/quotes/new" className="w-full md:w-auto text-center bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white px-8 py-4 md:py-3 rounded-xl font-black uppercase text-[12px] md:text-xs tracking-widest transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 min-h-[52px] md:min-h-0 flex items-center justify-center active:scale-95">
           + New Quote
         </Link>
       </div>
@@ -698,12 +698,12 @@ export default function QuotesList() {
           <div className={`p-4 rounded-2xl border ${isLightMode ? 'bg-white border-slate-200' : 'bg-slate-900/50 border-white/10'}`}>
             <p className={`text-[9px] font-black uppercase tracking-widest ${isLightMode ? 'text-slate-500' : 'text-slate-400'}`}>Pipeline Value</p>
             <p className="text-2xl md:text-3xl font-black tracking-tighter text-emerald-500 mt-1">${totalPipelineValue.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
-            <p className={`text-[8px] font-bold uppercase tracking-widest mt-0.5 ${isLightMode ? 'text-slate-400' : 'text-slate-500'}`}>active quotes + jobs</p>
+            <p className={`text-[10px] sm:text-[8px] font-bold uppercase tracking-widest mt-0.5 ${isLightMode ? 'text-slate-400' : 'text-slate-500'}`}>active quotes + jobs</p>
           </div>
           <div className={`p-4 rounded-2xl border ${isLightMode ? 'bg-white border-slate-200' : 'bg-slate-900/50 border-white/10'}`}>
             <p className={`text-[9px] font-black uppercase tracking-widest ${isLightMode ? 'text-slate-500' : 'text-slate-400'}`}>Awaiting Response</p>
             <p className="text-2xl md:text-3xl font-black tracking-tighter text-amber-500 mt-1">{sentCount}</p>
-            <p className={`text-[8px] font-bold uppercase tracking-widest mt-0.5 ${isLightMode ? 'text-slate-400' : 'text-slate-500'}`}>sent to clients</p>
+            <p className={`text-[10px] sm:text-[8px] font-bold uppercase tracking-widest mt-0.5 ${isLightMode ? 'text-slate-400' : 'text-slate-500'}`}>sent to clients</p>
           </div>
           <button
             onClick={() => setListFilter(listFilter === "production" ? "all" : "production")}
@@ -711,7 +711,7 @@ export default function QuotesList() {
           >
             <p className={`text-[9px] font-black uppercase tracking-widest ${isLightMode ? 'text-slate-500' : 'text-slate-400'}`}>In Production</p>
             <p className="text-2xl md:text-3xl font-black tracking-tighter text-sky-500 mt-1">{productionCount}</p>
-            <p className={`text-[8px] font-bold uppercase tracking-widest mt-0.5 ${isLightMode ? 'text-slate-400' : 'text-slate-500'}`}>on the shop floor</p>
+            <p className={`text-[10px] sm:text-[8px] font-bold uppercase tracking-widest mt-0.5 ${isLightMode ? 'text-slate-400' : 'text-slate-500'}`}>on the shop floor</p>
           </button>
           <button
             onClick={() => {
@@ -724,7 +724,7 @@ export default function QuotesList() {
           >
             <p className={`text-[9px] font-black uppercase tracking-widest ${staleCount > 0 ? 'text-red-500' : (isLightMode ? 'text-slate-500' : 'text-slate-400')}`}>Needs Chasing</p>
             <p className={`text-2xl md:text-3xl font-black tracking-tighter mt-1 ${staleCount > 0 ? 'text-red-500' : (isLightMode ? 'text-slate-300' : 'text-slate-600')}`}>{staleCount}</p>
-            <p className={`text-[8px] font-bold uppercase tracking-widest mt-0.5 ${isLightMode ? 'text-slate-400' : 'text-slate-500'}`}>sent &gt;{STALE_DAYS}d ago</p>
+            <p className={`text-[10px] sm:text-[8px] font-bold uppercase tracking-widest mt-0.5 ${isLightMode ? 'text-slate-400' : 'text-slate-500'}`}>sent &gt;{STALE_DAYS}d ago</p>
           </button>
         </div>
       )}

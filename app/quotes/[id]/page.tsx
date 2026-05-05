@@ -578,11 +578,11 @@ export default function ProfessionalQuotePage() {
       {/* COMMAND BAR */}
       <div className="w-full max-w-[210mm] mb-6 flex flex-col gap-3 print:hidden px-2 sm:px-0 mt-4">
 
-        <div className="w-full flex justify-between items-center mb-2">
-          <button onClick={() => router.back()} className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] hover:text-slate-900 dark:hover:text-white transition">
-            ← Return to Dashboard
+        <div className="w-full flex justify-between items-center mb-2 gap-2">
+          <button onClick={() => router.back()} className="text-slate-500 text-[11px] sm:text-[10px] font-black uppercase tracking-widest sm:tracking-[0.4em] hover:text-slate-900 dark:hover:text-white transition min-h-[40px] flex items-center px-1 active:scale-95">
+            ← <span className="hidden sm:inline">Return to Dashboard</span><span className="sm:hidden">Back</span>
           </button>
-          <button onClick={handlePrint} className="bg-slate-900 dark:bg-white text-white dark:text-black px-6 py-2.5 rounded-full font-black uppercase text-[9px] tracking-widest shadow-2xl hover:scale-105 transition-all">
+          <button onClick={handlePrint} className="bg-slate-900 dark:bg-white text-white dark:text-black px-5 sm:px-6 py-3 sm:py-2.5 rounded-full font-black uppercase text-[11px] sm:text-[9px] tracking-widest shadow-2xl hover:scale-105 active:scale-95 transition-all min-h-[44px] sm:min-h-0">
             Export PDF
           </button>
         </div>
@@ -618,13 +618,13 @@ export default function ProfessionalQuotePage() {
             <div className="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest sm:w-[100px] shrink-0 flex items-center">
               Share Quote:
             </div>
-            <button onClick={sendWhatsApp} className="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white py-2.5 rounded-lg font-black uppercase text-[9px] tracking-widest transition-all">
+            <button onClick={sendWhatsApp} className="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white py-3 sm:py-2.5 rounded-lg font-black uppercase text-[11px] sm:text-[9px] tracking-widest transition-all min-h-[44px] sm:min-h-0 active:scale-95">
               WhatsApp
             </button>
-            <button onClick={sendEmail} className="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white py-2.5 rounded-lg font-black uppercase text-[9px] tracking-widest transition-all">
+            <button onClick={sendEmail} className="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white py-3 sm:py-2.5 rounded-lg font-black uppercase text-[11px] sm:text-[9px] tracking-widest transition-all min-h-[44px] sm:min-h-0 active:scale-95">
               Email
             </button>
-            <button onClick={() => copyToClipboard(shareUrl, 'Quote Link')} className="flex-1 bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/20 text-slate-900 dark:text-white py-2.5 rounded-lg font-black uppercase text-[9px] tracking-widest transition-all">
+            <button onClick={() => copyToClipboard(shareUrl, 'Quote Link')} className="flex-1 bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/20 text-slate-900 dark:text-white py-3 sm:py-2.5 rounded-lg font-black uppercase text-[11px] sm:text-[9px] tracking-widest transition-all min-h-[44px] sm:min-h-0 active:scale-95">
               Copy Link
             </button>
           </div>
