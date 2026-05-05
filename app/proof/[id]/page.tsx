@@ -111,8 +111,8 @@ export default function ClientProofPortal() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-6 md:p-12 pb-32">
-        
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-12 pb-32">
+
         {/* Status Banner */}
         {isApproved ? (
             <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-6 rounded-2xl mb-8 text-center shadow-sm">
@@ -142,11 +142,11 @@ export default function ClientProofPortal() {
 
         {/* Action Footer */}
         {!isApproved && (
-            <div className="fixed bottom-0 left-0 right-0 bg-white/90 border-t border-slate-200 p-4 md:p-6 backdrop-blur-xl z-50 flex justify-center shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
-                <button 
+            <div className="fixed bottom-0 left-0 right-0 bg-white/90 border-t border-slate-200 p-4 md:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))] md:pb-[calc(1.5rem+env(safe-area-inset-bottom))] backdrop-blur-xl z-50 flex justify-center shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+                <button
                     onClick={handleApprove}
                     disabled={approving}
-                    className="w-full max-w-md bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-xl font-black uppercase text-sm tracking-widest transition-all shadow-[0_10px_20px_rgba(16,185,129,0.2)] hover:shadow-[0_10px_25px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-1"
+                    className="w-full max-w-md bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-xl font-black uppercase text-sm tracking-widest transition-all shadow-[0_10px_20px_rgba(16,185,129,0.2)] hover:shadow-[0_10px_25px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-1 active:scale-95 min-h-[56px]"
                 >
                     {approving ? "Processing..." : "Approve & Sign Off"}
                 </button>

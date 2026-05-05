@@ -219,23 +219,23 @@ export default function ClientFacingPO() {
 
       {/* COMMAND BAR (CLEANED FOR CLIENT) */}
       <div className="w-full max-w-[210mm] mb-4 flex flex-col gap-3 print:hidden px-2 sm:px-0 mt-4">
-        <div className="w-full flex justify-between items-center mb-2">
-            <button onClick={() => router.back()} className={`text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] transition ${isLightMode ? 'hover:text-slate-900' : 'hover:text-white'}`}>
-              ← Return to Portal
+        <div className="w-full flex justify-between items-center mb-2 gap-2">
+            <button onClick={() => router.back()} className={`text-slate-500 text-[11px] sm:text-[10px] font-black uppercase tracking-widest sm:tracking-[0.4em] transition min-h-[40px] flex items-center px-1 active:scale-95 ${isLightMode ? 'hover:text-slate-900' : 'hover:text-white'}`}>
+              ← <span className="hidden sm:inline">Return to Portal</span><span className="sm:hidden">Back</span>
             </button>
             <div className="flex gap-2">
-              <button 
+              <button
                 onClick={toggleTheme}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] transition-all border shadow-sm ${
-                  isLightMode 
-                    ? 'bg-white border-slate-300 text-slate-800 hover:bg-slate-50' 
+                className={`flex items-center gap-2 px-4 py-3 sm:py-2.5 rounded-full text-[11px] sm:text-[9px] font-black uppercase tracking-widest sm:tracking-[0.2em] transition-all border shadow-sm min-h-[44px] sm:min-h-0 active:scale-95 ${
+                  isLightMode
+                    ? 'bg-white border-slate-300 text-slate-800 hover:bg-slate-50'
                     : 'bg-black border-slate-700 text-white hover:bg-slate-800'
                 }`}
               >
-                {isLightMode ? 'Dark Mode' : 'Light Mode'}
+                {isLightMode ? 'Dark' : 'Light'}<span className="hidden sm:inline"> Mode</span>
               </button>
-              <button onClick={handlePrint} className="bg-emerald-600 text-white px-6 py-2.5 rounded-full font-black uppercase text-[9px] tracking-widest shadow-xl hover:scale-105 transition-all hover:bg-emerald-500 border border-emerald-500">
-                Download PDF
+              <button onClick={handlePrint} className="bg-emerald-600 text-white px-5 sm:px-6 py-3 sm:py-2.5 rounded-full font-black uppercase text-[11px] sm:text-[9px] tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all hover:bg-emerald-500 border border-emerald-500 min-h-[44px] sm:min-h-0">
+                <span className="sm:hidden">PDF</span><span className="hidden sm:inline">Download PDF</span>
               </button>
             </div>
         </div>

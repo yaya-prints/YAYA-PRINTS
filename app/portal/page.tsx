@@ -674,9 +674,9 @@ export default function B2BClientPortal() {
                       </button>
                   </div>
 
-                  <button 
+                  <button
                       onClick={handleLogout}
-                      className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-colors ${isLightMode ? 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200' : 'bg-black/40 border-white/10 text-slate-400 hover:text-white hover:border-slate-500'}`}
+                      className={`px-4 py-2.5 sm:py-1.5 rounded-lg text-[11px] sm:text-[9px] font-black uppercase tracking-widest border transition-colors min-h-[40px] sm:min-h-0 active:scale-95 ${isLightMode ? 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200' : 'bg-black/40 border-white/10 text-slate-400 hover:text-white hover:border-slate-500'}`}
                   >
                       Logout
                   </button>
@@ -713,20 +713,20 @@ export default function B2BClientPortal() {
 
               {/* NAVIGATION TABS (COMPACT) */}
               <div className="flex gap-2 border-b border-inherit pb-2 overflow-x-auto no-scrollbar items-center">
-                  <button onClick={() => setActiveTab("active")} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm ${activeTab === 'active' ? 'bg-sky-500/20 text-sky-500 border-sky-500/50' : (isLightMode ? 'bg-white text-slate-500 border-slate-200 hover:border-slate-300' : 'bg-black/40 text-slate-500 border-white/5 hover:text-white')}`}>
+                  <button onClick={() => setActiveTab("active")} className={`px-4 py-2.5 sm:py-2 rounded-full text-[11px] sm:text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm min-h-[40px] sm:min-h-0 active:scale-95 ${activeTab === 'active' ? 'bg-sky-500/20 text-sky-500 border-sky-500/50' : (isLightMode ? 'bg-white text-slate-500 border-slate-200 hover:border-slate-300' : 'bg-black/40 text-slate-500 border-white/5 hover:text-white')}`}>
                       Live Orders ({activeJobs.length})
                   </button>
-                  <button onClick={() => setActiveTab("history")} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm ${activeTab === 'history' ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/50' : (isLightMode ? 'bg-white text-slate-500 border-slate-200 hover:border-slate-300' : 'bg-black/40 text-slate-500 border-white/5 hover:text-white')}`}>
+                  <button onClick={() => setActiveTab("history")} className={`px-4 py-2.5 sm:py-2 rounded-full text-[11px] sm:text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm min-h-[40px] sm:min-h-0 active:scale-95 ${activeTab === 'history' ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/50' : (isLightMode ? 'bg-white text-slate-500 border-slate-200 hover:border-slate-300' : 'bg-black/40 text-slate-500 border-white/5 hover:text-white')}`}>
                       Order History
                   </button>
-                  <button onClick={() => setActiveTab("billing")} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm ${activeTab === 'billing' ? 'bg-indigo-500/20 text-indigo-500 border-indigo-500/50' : (isLightMode ? 'bg-white text-slate-500 border-slate-200 hover:border-slate-300' : 'bg-black/40 text-slate-500 border-white/5 hover:text-white')}`}>
+                  <button onClick={() => setActiveTab("billing")} className={`px-4 py-2.5 sm:py-2 rounded-full text-[11px] sm:text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm min-h-[40px] sm:min-h-0 active:scale-95 ${activeTab === 'billing' ? 'bg-indigo-500/20 text-indigo-500 border-indigo-500/50' : (isLightMode ? 'bg-white text-slate-500 border-slate-200 hover:border-slate-300' : 'bg-black/40 text-slate-500 border-white/5 hover:text-white')}`}>
                       Billing & Invoices
                   </button>
-                  <button onClick={() => setActiveTab("vault")} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm ${activeTab === 'vault' ? 'bg-fuchsia-500/20 text-fuchsia-500 border-fuchsia-500/50' : (isLightMode ? 'bg-white text-slate-500 border-slate-200 hover:border-slate-300' : 'bg-black/40 text-slate-500 border-white/5 hover:text-white')}`}>
+                  <button onClick={() => setActiveTab("vault")} className={`px-4 py-2.5 sm:py-2 rounded-full text-[11px] sm:text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm min-h-[40px] sm:min-h-0 active:scale-95 ${activeTab === 'vault' ? 'bg-fuchsia-500/20 text-fuchsia-500 border-fuchsia-500/50' : (isLightMode ? 'bg-white text-slate-500 border-slate-200 hover:border-slate-300' : 'bg-black/40 text-slate-500 border-white/5 hover:text-white')}`}>
                       📁 Brand Vault
                   </button>
                   
-                  <button onClick={() => setActiveTab("new")} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm ml-auto ${activeTab === 'new' ? 'bg-sky-600 text-white border-sky-500' : (isLightMode ? 'bg-slate-800 text-white hover:bg-slate-700 border-slate-800' : 'bg-slate-800 text-white border-slate-700 hover:bg-slate-700')}`}>
+                  <button onClick={() => setActiveTab("new")} className={`px-4 py-2.5 sm:py-2 rounded-full text-[11px] sm:text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm min-h-[40px] sm:min-h-0 active:scale-95 ml-auto ${activeTab === 'new' ? 'bg-sky-600 text-white border-sky-500' : (isLightMode ? 'bg-slate-800 text-white hover:bg-slate-700 border-slate-800' : 'bg-slate-800 text-white border-slate-700 hover:bg-slate-700')}`}>
                       + New Order
                   </button>
               </div>
