@@ -252,13 +252,13 @@ export default function ExecutiveCommandCenter() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0f1115] text-slate-900 dark:text-white font-sans p-4 md:p-8 max-w-[1600px] mx-auto pb-20 md:pb-32 transition-colors duration-300">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0f1115] text-slate-900 dark:text-white font-sans p-3 sm:p-4 md:p-8 max-w-[1600px] mx-auto pb-8 md:pb-32 transition-colors duration-300">
 
       {/* ============ HEADER ============ */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 md:mb-8 border-b border-slate-200 dark:border-white/10 pb-6 md:pb-8 mt-4 gap-4">
-        <div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter italic leading-none text-slate-900 dark:text-white">YAYA Command</h1>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-5 md:mb-8 border-b border-slate-200 dark:border-white/10 pb-5 md:pb-8 mt-2 md:mt-4 gap-3 md:gap-4">
+        <div className="w-full md:w-auto">
+          <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+            <h1 className="text-2xl sm:text-3xl md:text-5xl font-black uppercase tracking-tighter italic leading-none text-slate-900 dark:text-white">YAYA Command</h1>
             <span
               className={`text-[8px] font-black uppercase tracking-widest flex items-center gap-1 px-2 py-1 rounded-full border ${
                 syncStatus === 'live'
@@ -277,14 +277,14 @@ export default function ExecutiveCommandCenter() {
               {syncStatus === 'live' ? 'Live' : syncStatus === 'polling' ? 'Poll' : '...'}
             </span>
           </div>
-          <p className="text-slate-500 text-[10px] md:text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.3em] mt-3 md:ml-1">
+          <p className="text-slate-500 text-[11px] md:text-xs font-black uppercase tracking-widest md:tracking-[0.3em] mt-2 md:mt-3 md:ml-1">
             {greeting} · {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full md:w-auto">
           <button
             onClick={fetchAll}
-            className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:border-sky-500 hover:text-sky-500 transition-colors"
+            className="flex-1 md:flex-none px-4 py-2.5 md:py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-[11px] md:text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:border-sky-500 hover:text-sky-500 transition-colors min-h-[44px] md:min-h-0 active:scale-95"
             title="Force refresh"
           >
             ↻ Refresh
@@ -294,12 +294,12 @@ export default function ExecutiveCommandCenter() {
 
       {/* ============ ALERT STRIP — only when something needs attention ============ */}
       {!loading && (overdueTodos.length > 0 || metrics.overdueJobsCount > 0) && (
-        <div className="mb-6 p-4 rounded-2xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-950/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+        <div className="mb-5 md:mb-6 p-4 rounded-2xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-950/20 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="text-2xl">🚨</span>
             <div>
-              <p className="text-[11px] font-black uppercase tracking-widest text-red-700 dark:text-red-400">Needs your attention</p>
-              <p className="text-[10px] font-bold text-red-600 dark:text-red-300 mt-0.5">
+              <p className="text-[12px] md:text-[11px] font-black uppercase tracking-widest text-red-700 dark:text-red-400">Needs your attention</p>
+              <p className="text-[11px] md:text-[10px] font-bold text-red-600 dark:text-red-300 mt-0.5">
                 {overdueTodos.length > 0 && `${overdueTodos.length} overdue task${overdueTodos.length > 1 ? 's' : ''}`}
                 {overdueTodos.length > 0 && metrics.overdueJobsCount > 0 && ' · '}
                 {metrics.overdueJobsCount > 0 && `${metrics.overdueJobsCount} overdue job${metrics.overdueJobsCount > 1 ? 's' : ''}`}
@@ -308,17 +308,17 @@ export default function ExecutiveCommandCenter() {
           </div>
           <div className="flex gap-2">
             {overdueTodos.length > 0 && (
-              <Link href="/todos" className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow transition-colors">View Tasks →</Link>
+              <Link href="/todos" className="flex-1 md:flex-none text-center px-4 py-3 md:py-2 bg-red-500 hover:bg-red-600 text-white text-[11px] md:text-[10px] font-black uppercase tracking-widest rounded-lg shadow transition-colors min-h-[44px] md:min-h-0 flex items-center justify-center active:scale-95">View Tasks →</Link>
             )}
             {metrics.overdueJobsCount > 0 && (
-              <Link href="/jobs" className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow transition-colors">View Jobs →</Link>
+              <Link href="/jobs" className="flex-1 md:flex-none text-center px-4 py-3 md:py-2 bg-red-500 hover:bg-red-600 text-white text-[11px] md:text-[10px] font-black uppercase tracking-widest rounded-lg shadow transition-colors min-h-[44px] md:min-h-0 flex items-center justify-center active:scale-95">View Jobs →</Link>
             )}
           </div>
         </div>
       )}
 
       {/* ============ KPI METRICS GRID — 5 cards ============ */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3 md:gap-4 mb-5 md:mb-6">
         {[
           { label: "Open Proposals", subtitle: "Pipeline revenue", value: `$${metrics.openRevenue.toLocaleString(undefined, {maximumFractionDigits: 0})}`, color: "blue", href: "/quotes" },
           { label: "Closed Revenue", subtitle: "Approved total",   value: `$${metrics.closedRevenue.toLocaleString(undefined, {maximumFractionDigits: 0})}`, color: "emerald", href: "/quotes" },
@@ -329,16 +329,16 @@ export default function ExecutiveCommandCenter() {
           <Link
             key={i}
             href={kpi.href}
-            className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 p-4 md:p-5 rounded-2xl shadow hover:shadow-lg hover:-translate-y-0.5 transition-all relative overflow-hidden group"
+            className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 p-3.5 sm:p-4 md:p-5 rounded-2xl shadow hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] transition-all relative overflow-hidden group"
           >
             <div className={`absolute top-0 right-0 w-20 h-20 bg-${kpi.color}-500/10 rounded-full blur-2xl -mr-6 -mt-6 group-hover:bg-${kpi.color}-500/20 transition-colors`}></div>
-            <div className={`text-[9px] font-black text-${kpi.color}-600 dark:text-${kpi.color}-400 uppercase tracking-widest mb-1 relative z-10`}>{kpi.label}</div>
+            <div className={`text-[10px] sm:text-[9px] font-black text-${kpi.color}-600 dark:text-${kpi.color}-400 uppercase tracking-widest mb-1 relative z-10`}>{kpi.label}</div>
             {loading ? (
-              <div className="h-8 w-24 bg-slate-200 dark:bg-white/5 rounded animate-pulse"></div>
+              <div className="h-7 w-20 bg-slate-200 dark:bg-white/5 rounded animate-pulse"></div>
             ) : (
-              <div className="text-2xl lg:text-3xl font-black text-slate-900 dark:text-white tracking-tighter relative z-10">{kpi.value}</div>
+              <div className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white tracking-tighter relative z-10">{kpi.value}</div>
             )}
-            <div className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1 relative z-10">{kpi.subtitle}</div>
+            <div className="text-[10px] sm:text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1 relative z-10">{kpi.subtitle}</div>
           </Link>
         ))}
       </div>
@@ -351,7 +351,7 @@ export default function ExecutiveCommandCenter() {
           <div className="flex justify-between items-center mb-4 border-b border-slate-200 dark:border-white/5 pb-3">
             <div className="flex items-center gap-2">
               <span className="text-lg">⏰</span>
-              <h2 className="text-[10px] md:text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Next 3 Hours</h2>
+              <h2 className="text-[12px] md:text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Next 3 Hours</h2>
               <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">{now.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}</span>
             </div>
             <Link href="/todos" className="text-[9px] font-black text-purple-500 uppercase tracking-widest hover:text-purple-400">Calendar →</Link>
@@ -423,7 +423,7 @@ export default function ExecutiveCommandCenter() {
           <div className="flex justify-between items-center mb-4 border-b border-slate-200 dark:border-white/5 pb-3">
             <div className="flex items-center gap-2">
               <span className="text-lg">💰</span>
-              <h2 className="text-[10px] md:text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Money Owed</h2>
+              <h2 className="text-[12px] md:text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Money Owed</h2>
             </div>
             <Link href="/invoices" className="text-[9px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-400">All →</Link>
           </div>
@@ -463,7 +463,7 @@ export default function ExecutiveCommandCenter() {
           <div className="flex justify-between items-center mb-4 border-b border-slate-200 dark:border-white/5 pb-3">
             <div className="flex items-center gap-2">
               <span className="text-lg">🎯</span>
-              <h2 className="text-[10px] md:text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Hot Leads</h2>
+              <h2 className="text-[12px] md:text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Hot Leads</h2>
             </div>
             <Link href="/customers" className="text-[9px] font-black text-teal-500 uppercase tracking-widest hover:text-teal-400">CRM →</Link>
           </div>
@@ -501,7 +501,7 @@ export default function ExecutiveCommandCenter() {
           <div className="flex justify-between items-center mb-4 border-b border-slate-200 dark:border-white/5 pb-3">
             <div className="flex items-center gap-2">
               <span className="text-lg">📊</span>
-              <h2 className="text-[10px] md:text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Pipeline</h2>
+              <h2 className="text-[12px] md:text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Pipeline</h2>
             </div>
             <Link href="/jobs" className="text-[9px] font-black text-sky-500 uppercase tracking-widest hover:text-sky-400">Board →</Link>
           </div>
@@ -530,7 +530,7 @@ export default function ExecutiveCommandCenter() {
           <div className="flex justify-between items-center mb-4 border-b border-slate-200 dark:border-white/5 pb-3">
             <div className="flex items-center gap-2">
               <span className="text-lg">⚠️</span>
-              <h2 className="text-[10px] md:text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Overdue Tasks</h2>
+              <h2 className="text-[12px] md:text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Overdue Tasks</h2>
             </div>
             <Link href="/todos" className="text-[9px] font-black text-red-500 uppercase tracking-widest hover:text-red-400">Tracker →</Link>
           </div>
@@ -600,17 +600,17 @@ export default function ExecutiveCommandCenter() {
       </div>
 
       {/* ============ QUICK ACTIONS PANEL ============ */}
-      <div className="bg-gradient-to-br from-sky-600 to-blue-700 rounded-2xl p-5 md:p-6 shadow-[0_20px_50px_rgba(37,99,235,0.3)] relative overflow-hidden">
+      <div className="bg-gradient-to-br from-sky-600 to-blue-700 rounded-2xl p-4 sm:p-5 md:p-6 shadow-[0_20px_50px_rgba(37,99,235,0.3)] relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full blur-3xl -ml-10 -mb-10"></div>
         <div className="relative z-10">
-          <p className="text-[9px] font-black text-white/80 uppercase tracking-widest mb-3">Quick Actions</p>
+          <p className="text-[11px] md:text-[9px] font-black text-white/80 uppercase tracking-widest mb-3">Quick Actions</p>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-            <Link href="/quotes/new" className="bg-white text-blue-600 text-center py-3 rounded-xl font-black uppercase tracking-widest text-[9px] hover:scale-[1.02] active:scale-95 transition-all shadow-lg">+ Proposal</Link>
-            <Link href="/todos" className="bg-blue-800 hover:bg-blue-900 text-white border border-blue-500 text-center py-3 rounded-xl font-black uppercase tracking-widest text-[9px] hover:scale-[1.02] active:scale-95 transition-all">+ Task</Link>
-            <Link href="/customers" className="bg-blue-800 hover:bg-blue-900 text-white border border-blue-500 text-center py-3 rounded-xl font-black uppercase tracking-widest text-[9px] hover:scale-[1.02] active:scale-95 transition-all">+ Lead</Link>
-            <Link href="/shop-floor" className="bg-emerald-500 hover:bg-emerald-600 text-white text-center py-3 rounded-xl font-black uppercase tracking-widest text-[9px] hover:scale-[1.02] active:scale-95 transition-all shadow-lg">▶ Shop Floor</Link>
-            <Link href="/jobs" className="bg-blue-800 hover:bg-blue-900 text-white border border-blue-500 text-center py-3 rounded-xl font-black uppercase tracking-widest text-[9px] hover:scale-[1.02] active:scale-95 transition-all">📋 Board</Link>
+            <Link href="/quotes/new" className="bg-white text-blue-600 text-center py-4 md:py-3 rounded-xl font-black uppercase tracking-widest text-[11px] md:text-[9px] hover:scale-[1.02] active:scale-95 transition-all shadow-lg min-h-[52px] md:min-h-0 flex items-center justify-center">+ Proposal</Link>
+            <Link href="/todos" className="bg-blue-800 hover:bg-blue-900 text-white border border-blue-500 text-center py-4 md:py-3 rounded-xl font-black uppercase tracking-widest text-[11px] md:text-[9px] hover:scale-[1.02] active:scale-95 transition-all min-h-[52px] md:min-h-0 flex items-center justify-center">+ Task</Link>
+            <Link href="/customers" className="bg-blue-800 hover:bg-blue-900 text-white border border-blue-500 text-center py-4 md:py-3 rounded-xl font-black uppercase tracking-widest text-[11px] md:text-[9px] hover:scale-[1.02] active:scale-95 transition-all min-h-[52px] md:min-h-0 flex items-center justify-center">+ Lead</Link>
+            <Link href="/shop-floor" className="bg-emerald-500 hover:bg-emerald-600 text-white text-center py-4 md:py-3 rounded-xl font-black uppercase tracking-widest text-[11px] md:text-[9px] hover:scale-[1.02] active:scale-95 transition-all shadow-lg min-h-[52px] md:min-h-0 flex items-center justify-center">▶ Shop Floor</Link>
+            <Link href="/jobs" className="bg-blue-800 hover:bg-blue-900 text-white border border-blue-500 text-center py-4 md:py-3 rounded-xl font-black uppercase tracking-widest text-[11px] md:text-[9px] hover:scale-[1.02] active:scale-95 transition-all col-span-2 md:col-span-1 min-h-[52px] md:min-h-0 flex items-center justify-center">📋 Board</Link>
           </div>
         </div>
       </div>
