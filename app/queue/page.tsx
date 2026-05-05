@@ -16,7 +16,7 @@
 //   - Keyboard: ↑/↓ to navigate, Cmd/Ctrl+K to search, Esc to clear selection
 // =============================================================================
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -66,7 +66,7 @@ const stageStyle = (stage?: string) => STAGE_COLORS[(stage || "").toLowerCase()]
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
-export default function PriorityQueuePage() {
+function PriorityQueuePageInner() {
   const searchParams = useSearchParams();
 
   // ---- DATA ----
@@ -989,5 +989,13 @@ export default function PriorityQueuePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function PriorityQueuePage() {
+  return (
+    <Suspense fallback={<div className="h-screen w-screen bg-[#0f1115] flex items-center justify-center font-black text-sky-500 tracking-widest uppercase animate-pulse text-sm">Loading Queue...</div>}>
+      <PriorityQueuePageInner />
+    </Suspense>
   );
 }
