@@ -161,18 +161,18 @@ export default function DailyTasksPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white p-8 font-sans">
+    <div className="min-h-screen bg-[#0a0a0a] text-white p-4 sm:p-6 md:p-8 font-sans">
       <div className="max-w-7xl mx-auto">
-        
+
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-10 gap-3 md:gap-4">
           <div>
-            <h1 className="text-3xl font-black tracking-tight">Daily Operations</h1>
-            <p className="text-gray-400 mt-1">Manage your production workflow and daily tasks.</p>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight">Daily Operations</h1>
+            <p className="text-gray-400 text-sm mt-1">Manage your production workflow and daily tasks.</p>
           </div>
-          <button 
+          <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-white text-black px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 hover:bg-gray-200 transition-colors shadow-xl"
+            className="w-full md:w-auto justify-center bg-white text-black px-5 py-3 md:py-2.5 rounded-lg font-bold flex items-center gap-2 hover:bg-gray-200 transition-colors shadow-xl min-h-[48px] md:min-h-0 active:scale-95"
           >
             <Plus size={20} />
             Add New Task
@@ -182,7 +182,7 @@ export default function DailyTasksPage() {
         {loading ? (
           <div className="text-center text-gray-500 py-20">Loading workflow...</div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 md:gap-8">
             
             {/* TODO COLUMN */}
             <div className="flex flex-col gap-4">

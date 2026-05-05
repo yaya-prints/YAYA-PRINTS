@@ -997,7 +997,7 @@ useEffect(() => {
             value={globalSearch}
             onChange={(e) => setGlobalSearch(e.target.value)}
             placeholder="Search task, client, job #..."
-            className={`w-full text-xs font-bold rounded-lg pl-9 pr-16 py-2 border outline-none transition-colors ${isLightMode ? 'bg-white border-slate-200 placeholder:text-slate-400 focus:border-sky-500' : 'bg-black/40 border-slate-700 placeholder:text-slate-500 focus:border-sky-500'}`}
+            className={`w-full text-sm md:text-xs font-bold rounded-lg pl-9 pr-16 py-3 md:py-2 border outline-none transition-colors min-h-[44px] md:min-h-0 ${isLightMode ? 'bg-white border-slate-200 placeholder:text-slate-400 focus:border-sky-500' : 'bg-black/40 border-slate-700 placeholder:text-slate-500 focus:border-sky-500'}`}
           />
           <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-sm ${theme.textMuted}`}>🔍</span>
           {globalSearch ? (

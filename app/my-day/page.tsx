@@ -1350,19 +1350,19 @@ export default function MyDayPage() {
 
       {/* ─── HEADER ─────────────────────────────────────────────────────── */}
       <div className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
-        <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="max-w-[1600px] mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4">
           <div>
-            <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-400 dark:text-slate-500 mb-1">
+            <div className="text-[10px] sm:text-[9px] font-black uppercase tracking-widest sm:tracking-[0.4em] text-slate-400 dark:text-slate-500 mb-1">
               {fmtDayHeader(selectedDate)}
             </div>
-            <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tighter italic text-black dark:text-white leading-none">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-tighter italic text-black dark:text-white leading-none">
               {isToday ? "My Day" : selectedDate === yesterdayISO() ? "Yesterday" : "Day View"}
             </h1>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
             {/* connection / queue */}
-            <div className={`text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-full border ${
+            <div className={`text-[10px] sm:text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-full border ${
               isOnline
                 ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
                 : "bg-amber-500/10 text-amber-500 border-amber-500/30"
@@ -1373,30 +1373,30 @@ export default function MyDayPage() {
 
             {/* date controls */}
             <button onClick={() => { const d = new Date(selectedDate + "T12:00:00"); d.setDate(d.getDate() - 1); setSelectedDate(d.toLocaleDateString("en-CA")); }}
-              className="px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700">←</button>
+              className="px-3 py-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[11px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 min-h-[44px] sm:min-h-0 active:scale-95">←</button>
             <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
-              className="px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-black border-none outline-none" />
+              className="px-3 py-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[12px] sm:text-[11px] font-black border-none outline-none min-h-[44px] sm:min-h-0" />
             <button onClick={() => { const d = new Date(selectedDate + "T12:00:00"); d.setDate(d.getDate() + 1); setSelectedDate(d.toLocaleDateString("en-CA")); }}
-              className="px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700">→</button>
+              className="px-3 py-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[11px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 min-h-[44px] sm:min-h-0 active:scale-95">→</button>
             <button onClick={() => setSelectedDate(todayISO())}
-              className="px-3 py-2 rounded-lg bg-sky-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-sky-500">Today</button>
+              className="px-3 py-2.5 rounded-lg bg-sky-600 text-white text-[11px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-sky-500 min-h-[44px] sm:min-h-0 active:scale-95">Today</button>
 
             {isToday && (
               <button onClick={carryOverFromYesterday}
-                className="px-3 py-2 rounded-lg bg-violet-500/10 text-violet-500 border border-violet-500/30 text-[10px] font-black uppercase tracking-widest hover:bg-violet-500/20">
+                className="px-3 py-2.5 rounded-lg bg-violet-500/10 text-violet-500 border border-violet-500/30 text-[11px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-violet-500/20 min-h-[44px] sm:min-h-0 active:scale-95">
                 ↻ Carry Over
               </button>
             )}
 
             <button onClick={() => setShowJobPicker(true)}
-              className="px-3 py-2 rounded-lg bg-orange-500/10 text-orange-500 border border-orange-500/30 text-[10px] font-black uppercase tracking-widest hover:bg-orange-500/20">
+              className="px-3 py-2.5 rounded-lg bg-orange-500/10 text-orange-500 border border-orange-500/30 text-[11px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-orange-500/20 min-h-[44px] sm:min-h-0 active:scale-95">
               + From Jobs
             </button>
 
             {unscheduledTasks.length > 0 && (
               <button onClick={autoPackPool}
                 title="Fill open timeline gaps with pool tasks (priority order)"
-                className="px-3 py-2 rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20">
+                className="px-3 py-2.5 rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 text-[11px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20 min-h-[44px] sm:min-h-0 active:scale-95">
                 ⚡ Auto-Pack
               </button>
             )}
@@ -1404,13 +1404,13 @@ export default function MyDayPage() {
             {isToday && scheduledTasks.length > 0 && (
               <button onClick={() => setShopMode(true)}
                 title="Full-screen big-button view of today's scheduled tasks"
-                className="px-3 py-2 rounded-lg bg-pink-500/10 text-pink-500 border border-pink-500/30 text-[10px] font-black uppercase tracking-widest hover:bg-pink-500/20">
+                className="px-3 py-2.5 rounded-lg bg-pink-500/10 text-pink-500 border border-pink-500/30 text-[11px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-pink-500/20 min-h-[44px] sm:min-h-0 active:scale-95">
                 🏭 Shop Mode
               </button>
             )}
 
             <button onClick={() => setShowReview(true)}
-              className="px-3 py-2 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/30 text-[10px] font-black uppercase tracking-widest hover:bg-amber-500/20">
+              className="px-3 py-2.5 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/30 text-[11px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-amber-500/20 min-h-[44px] sm:min-h-0 active:scale-95">
               Daily Review
             </button>
           </div>

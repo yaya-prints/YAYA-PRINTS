@@ -101,13 +101,13 @@ export default function MobileWarehouseScanner() {
   };
 
   return (
-    <div className={`min-h-screen ${isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#0f1115] text-white'} font-sans p-4 md:p-10 transition-colors duration-300 pb-32`}>
-      
+    <div className={`min-h-screen ${isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#0f1115] text-white'} font-sans p-3 sm:p-4 md:p-10 transition-colors duration-300 pb-12 md:pb-32`}>
+
       {/* HEADER */}
-      <div className="flex justify-between items-end mb-8 border-b border-white/10 pb-6 mt-4">
+      <div className="flex justify-between items-end mb-5 md:mb-8 border-b border-white/10 pb-5 md:pb-6 mt-2 md:mt-4">
         <div>
-          <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter italic leading-none">WMS Scanner</h1>
-          <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mt-3 ml-1">Live Inventory Uplink</p>
+          <h1 className="text-2xl sm:text-3xl md:text-5xl font-black uppercase tracking-tighter italic leading-none">WMS Scanner</h1>
+          <p className="text-slate-500 text-[11px] md:text-[10px] font-black uppercase tracking-widest md:tracking-[0.3em] mt-2 md:mt-3 ml-1">Live Inventory Uplink</p>
         </div>
       </div>
 
@@ -143,7 +143,7 @@ export default function MobileWarehouseScanner() {
           ) : errorMsg ? (
              <div className="text-center py-20">
                  <div className="text-red-500 font-black uppercase tracking-widest mb-4">{errorMsg}</div>
-                 <button onClick={resetScanner} className="px-6 py-3 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Try Again</button>
+                 <button onClick={resetScanner} className="px-6 py-3 bg-slate-800 text-white rounded-xl text-[11px] md:text-[10px] font-black uppercase tracking-widest min-h-[44px] active:scale-95">Try Again</button>
              </div>
           ) : location && (
             <div className={`${isLightMode ? 'bg-white border-slate-200' : 'bg-slate-900 border-white/5'} border p-6 md:p-8 rounded-[2rem] shadow-2xl relative`}>
@@ -157,7 +157,7 @@ export default function MobileWarehouseScanner() {
                         <h2 className="text-3xl font-black uppercase tracking-tighter">{location.name}</h2>
                         <div className="text-[9px] font-mono text-slate-500 mt-1">ID: {location.qr_id}</div>
                     </div>
-                    <button onClick={resetScanner} className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${isLightMode ? 'bg-slate-100 border-slate-300 hover:bg-slate-200' : 'bg-slate-800 border-slate-700 hover:bg-slate-700 text-white'}`}>
+                    <button onClick={resetScanner} className={`px-4 py-2.5 rounded-lg text-[11px] sm:text-[9px] font-black uppercase tracking-widest border transition-all min-h-[44px] sm:min-h-0 active:scale-95 ${isLightMode ? 'bg-slate-100 border-slate-300 hover:bg-slate-200' : 'bg-slate-800 border-slate-700 hover:bg-slate-700 text-white'}`}>
                         Scan New
                     </button>
                 </div>
