@@ -351,7 +351,7 @@ export default function LeadProspector() {
         </div>
         
         <div className="flex items-center gap-3">
-            <Link href="/customers" className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-colors ${isLightMode ? 'bg-sky-50 border-sky-200 text-sky-600 hover:bg-sky-100' : 'bg-sky-900/20 border-sky-800 text-sky-400 hover:bg-sky-900/40'}`}>
+            <Link href="/customers" className={`px-4 py-2.5 rounded-lg text-[11px] sm:text-[9px] font-black uppercase tracking-widest border transition-colors min-h-[40px] sm:min-h-0 active:scale-95 ${isLightMode ? 'bg-sky-50 border-sky-200 text-sky-600 hover:bg-sky-100' : 'bg-sky-900/20 border-sky-800 text-sky-400 hover:bg-sky-900/40'}`}>
                 Open CRM
             </Link>
         </div>
@@ -406,7 +406,7 @@ export default function LeadProspector() {
                           </div>
                       </div>
 
-                      <button type="submit" disabled={isSearching} className={`w-full mt-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isSearching ? 'bg-slate-500 text-white cursor-wait border-none' : 'bg-fuchsia-600 hover:bg-fuchsia-500 text-white shadow-[0_0_20px_rgba(217,70,239,0.3)]'}`}>
+                      <button type="submit" disabled={isSearching} className={`w-full mt-4 py-4 rounded-xl text-[12px] md:text-[10px] font-black uppercase tracking-widest transition-all min-h-[52px] active:scale-95 ${isSearching ? 'bg-slate-500 text-white cursor-wait border-none' : 'bg-fuchsia-600 hover:bg-fuchsia-500 text-white shadow-[0_0_20px_rgba(217,70,239,0.3)]'}`}>
                           {isSearching ? 'Scanning Network...' : 'Search Prospects'}
                       </button>
                   </form>

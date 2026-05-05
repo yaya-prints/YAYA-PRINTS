@@ -200,33 +200,33 @@ export default function InteractiveCartEngine() {
     <div className="min-h-screen bg-[#fafafa] font-sans text-gray-900 pb-20">
       
       {/* HEADER & ACCOUNT SIMULATOR */}
-      <header className="bg-white border-b border-[#8A8D8F]/30 py-4 px-8 shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold tracking-tight text-gray-900">Custom Studio</h1>
+      <header className="bg-white border-b border-[#8A8D8F]/30 py-3 sm:py-4 px-3 sm:px-6 md:px-8 shadow-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-gray-900">Custom Studio</h1>
             <span className="text-[#8A8D8F]">|</span>
-            <span className="text-sm font-semibold tracking-wider text-[#B87333] uppercase">Quoting Engine</span>
+            <span className="text-xs sm:text-sm font-semibold tracking-wider text-[#B87333] uppercase">Quoting Engine</span>
           </div>
-          
-          <div className="flex items-center gap-3 bg-[#f4f4f5] p-1.5 rounded-lg border border-[#8A8D8F]/20">
-            <span className="text-xs font-bold text-gray-500 uppercase px-2">Account:</span>
-            <button 
+
+          <div className="flex items-center gap-2 sm:gap-3 bg-[#f4f4f5] p-1.5 rounded-lg border border-[#8A8D8F]/20 overflow-x-auto">
+            <span className="text-xs font-bold text-gray-500 uppercase px-2 shrink-0">Account:</span>
+            <button
               onClick={() => setAccountMode("retail")}
-              className={`px-3 py-1.5 text-xs font-bold rounded transition-all ${accountMode === "retail" ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-900"}`}
+              className={`px-3 py-2 sm:py-1.5 text-xs font-bold rounded transition-all whitespace-nowrap shrink-0 min-h-[40px] sm:min-h-0 active:scale-95 ${accountMode === "retail" ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-900"}`}
             >
-              Guest (Retail)
+              Guest <span className="hidden sm:inline">(Retail)</span>
             </button>
-            <button 
+            <button
               onClick={() => setAccountMode("wholesale")}
-              className={`px-3 py-1.5 text-xs font-bold rounded transition-all flex items-center gap-1 ${accountMode === "wholesale" ? "bg-[#1a1a1a] shadow-sm text-white" : "text-gray-500 hover:text-gray-900"}`}
+              className={`px-3 py-2 sm:py-1.5 text-xs font-bold rounded transition-all flex items-center gap-1 whitespace-nowrap shrink-0 min-h-[40px] sm:min-h-0 active:scale-95 ${accountMode === "wholesale" ? "bg-[#1a1a1a] shadow-sm text-white" : "text-gray-500 hover:text-gray-900"}`}
             >
-              PP Prefix (Wholesale)
+              PP Prefix <span className="hidden sm:inline">(Wholesale)</span>
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 mt-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 mt-5 sm:mt-8 space-y-5 sm:space-y-8">
         
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
