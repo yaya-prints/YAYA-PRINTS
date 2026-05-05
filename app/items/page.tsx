@@ -209,33 +209,33 @@ export default function AdminItemsManager() {
     <div className={`min-h-screen ${theme.bgMain} ${theme.textMain} font-sans flex flex-col pb-24 transition-colors duration-300`}>
       
       {/* HEADER */}
-      <div className={`border-b ${theme.border} ${theme.bgPanel} px-6 py-4 flex flex-col md:flex-row gap-4 justify-between items-center z-40 sticky top-0 shadow-sm transition-colors duration-300`}>
-        <div className="flex items-center gap-4">
-          <button onClick={() => router.back()} className={`text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-lg border transition-colors ${isLightMode ? 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200' : 'bg-black border-slate-800 text-slate-400 hover:text-white'}`}>
+      <div className={`border-b ${theme.border} ${theme.bgPanel} px-3 sm:px-6 py-3 sm:py-4 flex flex-col md:flex-row gap-3 md:gap-4 justify-between items-stretch md:items-center z-40 sticky top-0 shadow-sm transition-colors duration-300`}>
+        <div className="flex items-center gap-3 md:gap-4">
+          <button onClick={() => router.back()} className={`text-[11px] sm:text-[9px] font-black uppercase tracking-widest px-4 py-2.5 sm:py-2 rounded-lg border transition-colors min-h-[44px] sm:min-h-0 active:scale-95 ${isLightMode ? 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200' : 'bg-black border-slate-800 text-slate-400 hover:text-white'}`}>
              ← Back
           </button>
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-0">
             <h1 className={`text-xl font-black uppercase tracking-tighter leading-none italic ${theme.textStrong}`}>Catalog <span className="text-sky-500">Manager</span></h1>
-            <span className={`text-[8px] font-black ${theme.textMuted} uppercase tracking-widest flex items-center gap-2`}>
-              Inventory & Pricing 
-              <span className="bg-slate-500/20 px-1.5 py-0.5 rounded text-slate-400">CMD+Z TO UNDO</span>
+            <span className={`text-[9px] sm:text-[8px] font-black ${theme.textMuted} uppercase tracking-widest flex items-center gap-2`}>
+              Inventory & Pricing
+              <span className="hidden sm:inline bg-slate-500/20 px-1.5 py-0.5 rounded text-slate-400">CMD+Z TO UNDO</span>
             </span>
           </div>
         </div>
-        
-        <div className="flex items-center gap-3 w-full md:w-auto">
-            <input 
+
+        <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
+            <input
               type="text"
               placeholder="Search items or categories..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={`w-full md:w-64 rounded-lg px-4 py-2 text-xs font-bold outline-none transition-colors border focus:border-sky-500 ${isLightMode ? 'bg-slate-100 border-slate-200' : 'bg-black border-slate-800'}`}
+              className={`flex-1 md:flex-none md:w-64 rounded-lg px-4 py-3 sm:py-2 text-sm md:text-xs font-bold outline-none transition-colors border focus:border-sky-500 min-h-[44px] sm:min-h-0 ${isLightMode ? 'bg-slate-100 border-slate-200' : 'bg-black border-slate-800'}`}
             />
-            <button onClick={toggleTheme} className={`flex items-center gap-2 px-3 py-2 rounded-lg border font-black text-[9px] uppercase tracking-widest transition-colors ${isLightMode ? 'bg-slate-200 border-slate-300 text-slate-800' : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'}`}>
+            <button onClick={toggleTheme} className={`flex items-center justify-center gap-2 px-3 py-2.5 sm:py-2 rounded-lg border font-black text-[11px] sm:text-[9px] uppercase tracking-widest transition-colors min-h-[44px] sm:min-h-0 active:scale-95 shrink-0 ${isLightMode ? 'bg-slate-200 border-slate-300 text-slate-800' : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'}`}>
                 {isLightMode ? '🌙' : '☀️'}
             </button>
-            <button onClick={handleAddNewItem} className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors border border-emerald-500 bg-emerald-600 text-white hover:bg-emerald-500 shadow-sm whitespace-nowrap shrink-0`}>
-                + New Item
+            <button onClick={handleAddNewItem} className={`px-4 py-2.5 sm:py-2 rounded-lg text-[11px] sm:text-[9px] font-black uppercase tracking-widest transition-colors border border-emerald-500 bg-emerald-600 text-white hover:bg-emerald-500 shadow-sm whitespace-nowrap shrink-0 min-h-[44px] sm:min-h-0 active:scale-95`}>
+                + New
             </button>
         </div>
       </div>

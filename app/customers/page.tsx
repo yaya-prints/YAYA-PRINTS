@@ -1251,10 +1251,10 @@ export default function ClientCRM() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Link href="/todos" className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-colors ${isLightMode ? 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50' : 'bg-black border-slate-700 text-slate-300 hover:text-white'}`}>
+          <Link href="/todos" className={`px-3 py-2.5 rounded-lg text-[11px] sm:text-[9px] font-black uppercase tracking-widest border transition-colors min-h-[40px] sm:min-h-0 active:scale-95 ${isLightMode ? 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50' : 'bg-black border-slate-700 text-slate-300 hover:text-white'}`}>
             To-Do List
           </Link>
-          <Link href="/shop-floor" className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-colors ${isLightMode ? 'bg-sky-50 border-sky-200 text-sky-600 hover:bg-sky-100' : 'bg-sky-900/20 border-sky-800 text-sky-400 hover:bg-sky-900/40'}`}>
+          <Link href="/shop-floor" className={`px-3 py-2.5 rounded-lg text-[11px] sm:text-[9px] font-black uppercase tracking-widest border transition-colors min-h-[40px] sm:min-h-0 active:scale-95 ${isLightMode ? 'bg-sky-50 border-sky-200 text-sky-600 hover:bg-sky-100' : 'bg-sky-900/20 border-sky-800 text-sky-400 hover:bg-sky-900/40'}`}>
             Shop Floor
           </Link>
         </div>

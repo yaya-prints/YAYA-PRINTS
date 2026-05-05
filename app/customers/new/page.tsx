@@ -34,14 +34,14 @@ export default function NewCustomer() {
   }
 
   return (
-    <div className="p-4 md:p-10 max-w-2xl mx-auto min-h-screen font-sans">
-      
-      <div className="mb-10 border-b border-white/10 pb-6 mt-4">
-        <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic leading-none text-white">Add New Client</h1>
-        <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mt-4 ml-1">Establish New Relationship Profile</p>
+    <div className="p-3 sm:p-4 md:p-10 max-w-2xl mx-auto min-h-screen font-sans">
+
+      <div className="mb-6 md:mb-10 border-b border-white/10 pb-5 md:pb-6 mt-2 md:mt-4">
+        <h1 className="text-2xl sm:text-3xl md:text-5xl font-black uppercase tracking-tighter italic leading-none text-white">Add New Client</h1>
+        <p className="text-slate-500 text-[11px] md:text-[10px] font-black uppercase tracking-widest md:tracking-[0.3em] mt-3 md:mt-4 ml-1">Establish New Relationship Profile</p>
       </div>
-      
-      <form onSubmit={saveCustomer} className="bg-slate-900/50 rounded-[2rem] shadow-2xl border border-white/5 p-6 md:p-10 flex flex-col gap-6">
+
+      <form onSubmit={saveCustomer} className="bg-slate-900/50 rounded-2xl sm:rounded-[2rem] shadow-2xl border border-white/5 p-5 sm:p-7 md:p-10 flex flex-col gap-5 md:gap-6">
         
         <div>
           <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 pl-2">Company Name *</label>
@@ -95,7 +95,7 @@ export default function NewCustomer() {
           </div>
         </div>
 
-        <button disabled={loading} type="submit" className="mt-8 bg-blue-600 text-white text-xs font-black uppercase tracking-[0.3em] py-5 rounded-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_30px_rgba(37,99,235,0.3)] disabled:opacity-50">
+        <button disabled={loading} type="submit" className="mt-4 md:mt-8 bg-blue-600 text-white text-sm md:text-xs font-black uppercase tracking-widest md:tracking-[0.3em] py-4 md:py-5 rounded-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_30px_rgba(37,99,235,0.3)] disabled:opacity-50 min-h-[56px]">
           {loading ? "Decrypting..." : "Create Client Profile →"}
         </button>
         

@@ -75,15 +75,15 @@ export default function DatabaseSurgeon() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0f1115] text-slate-900 dark:text-white p-6 md:p-12 font-sans transition-colors duration-300">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0f1115] text-slate-900 dark:text-white p-4 sm:p-6 md:p-12 font-sans transition-colors duration-300">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-black uppercase tracking-tighter mb-2 text-blue-600 dark:text-blue-500">Database Repair Tool</h1>
-        <p className="text-slate-500 dark:text-slate-400 font-bold mb-10 text-sm">This script will automatically scan the CRM for the 19 corrupted addresses from the legacy tracker and overwrite them with their true Company Names.</p>
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-tighter mb-2 text-blue-600 dark:text-blue-500">Database Repair Tool</h1>
+        <p className="text-slate-500 dark:text-slate-400 font-bold mb-6 md:mb-10 text-sm">This script will automatically scan the CRM for the 19 corrupted addresses from the legacy tracker and overwrite them with their true Company Names.</p>
 
-        <button 
-          onClick={executeRepair} 
+        <button
+          onClick={executeRepair}
           disabled={isFixing}
-          className="w-full py-6 bg-blue-600 text-white font-black uppercase tracking-[0.3em] rounded-2xl hover:bg-blue-500 transition-all shadow-xl dark:shadow-[0_0_50px_rgba(37,99,235,0.4)] disabled:opacity-50 mb-10"
+          className="w-full py-5 md:py-6 bg-blue-600 text-white font-black uppercase tracking-widest md:tracking-[0.3em] text-sm md:text-base rounded-2xl hover:bg-blue-500 active:scale-95 transition-all shadow-xl dark:shadow-[0_0_50px_rgba(37,99,235,0.4)] disabled:opacity-50 mb-6 md:mb-10 min-h-[56px]"
         >
           {isFixing ? "SCANNING & REPAIRING DATABASE..." : "AUTO-FIX CORRUPTED CRM NAMES"}
         </button>

@@ -239,7 +239,7 @@ export default function PrintCenter() {
   // RENDER
   // =====================================================================
   return (
-    <div className="min-h-[calc(100vh-70px)] bg-slate-50 dark:bg-[#0f1115] text-slate-900 dark:text-slate-100 transition-colors duration-300">
+    <div className="min-h-[calc(100dvh-72px)] md:min-h-[calc(100vh-70px)] bg-slate-50 dark:bg-[#0f1115] text-slate-900 dark:text-slate-100 transition-colors duration-300">
 
       {/* ============ PRINT-ONLY STYLES ============ */}
       <style jsx global>{`
@@ -293,13 +293,13 @@ export default function PrintCenter() {
       {/* =================== SCREEN UI =================== */}
       <div className="screen-only">
         {/* HEADER */}
-        <div className="px-4 md:px-8 pt-6 pb-4 max-w-[1600px] mx-auto">
-          <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
+        <div className="px-3 sm:px-4 md:px-8 pt-4 sm:pt-6 pb-4 max-w-[1600px] mx-auto">
+          <div className="flex items-end justify-between flex-wrap gap-3 md:gap-4 mb-5 md:mb-6">
             <div>
-              <h1 className="text-3xl md:text-4xl font-black tracking-tighter uppercase italic">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tighter uppercase italic">
                 Print Center
               </h1>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-[11px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mt-1">
                 Daily lists · Production labels · Garment labels
               </p>
             </div>
@@ -309,7 +309,7 @@ export default function PrintCenter() {
           </div>
 
           {/* ============ TAB PILLS ============ */}
-          <div className="flex flex-wrap gap-2.5 mb-6">
+          <div className="flex gap-2.5 mb-5 md:mb-6 overflow-x-auto md:flex-wrap no-scrollbar">
             {TABS.map(t => {
               const count = jobs.filter(j => t.stages.includes(j.stage)).length;
               const isActive = activeTab === t.key;
@@ -317,7 +317,7 @@ export default function PrintCenter() {
                 <button
                   key={t.key}
                   onClick={() => setActiveTab(t.key)}
-                  className={`px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest border shadow-sm transition-all active:scale-95 ${
+                  className={`px-5 py-3 sm:py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest border shadow-sm transition-all active:scale-95 shrink-0 whitespace-nowrap min-h-[44px] sm:min-h-0 ${
                     isActive ? t.pillBg : t.pillIdle
                   }`}
                 >

@@ -138,18 +138,18 @@ export default function SourcingCommandCenter() {
   const uniqueStylesNeeded = Object.keys(masterBuyList).length;
 
   return (
-    <div className="p-10 max-w-[1600px] mx-auto min-h-screen text-white bg-black font-sans pb-32 selection:bg-red-500 selection:text-white">
-      
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end mb-10 border-b border-white/10 pb-8 gap-6">
+    <div className="p-3 sm:p-4 md:p-6 lg:p-10 max-w-[1600px] mx-auto min-h-screen text-white bg-black font-sans pb-12 md:pb-32 selection:bg-red-500 selection:text-white">
+
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end mb-5 md:mb-10 border-b border-white/10 pb-5 md:pb-8 gap-4 md:gap-6">
         <div>
-          <h1 className="text-5xl font-black uppercase tracking-tighter italic leading-none">Purchasing & Sourcing</h1>
-          <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mt-4 ml-1">Live Blank Garment Procurement</p>
+          <h1 className="text-2xl sm:text-3xl md:text-5xl font-black uppercase tracking-tighter italic leading-none">Purchasing & Sourcing</h1>
+          <p className="text-slate-500 text-[11px] md:text-[10px] font-black uppercase tracking-widest md:tracking-[0.3em] mt-3 md:mt-4 ml-1">Live Blank Garment Procurement</p>
         </div>
         <div className="w-full xl:w-[400px]">
-          <input 
-            type="text" placeholder="Search Garment, Job #, or Client..." 
+          <input
+            type="text" placeholder="Search Garment, Job #, or Client..."
             value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-900/50 border border-white/10 p-4 rounded-xl text-xs font-bold outline-none focus:border-red-500 transition shadow-inner" 
+            className="w-full bg-slate-900/50 border border-white/10 p-4 rounded-xl text-sm md:text-xs font-bold outline-none focus:border-red-500 transition shadow-inner min-h-[48px]"
           />
         </div>
       </div>

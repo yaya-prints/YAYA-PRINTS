@@ -211,12 +211,12 @@ export default function WarehouseManager() {
       {/* MAIN UI WRAPPER */}
       <div className={`main-ui-wrapper ${printTarget ? 'no-print' : ''}`}>
         
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 border-b border-white/10 pb-8 no-print gap-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-5 md:mb-10 border-b border-white/10 pb-5 md:pb-8 no-print gap-4 md:gap-6">
           <div>
-            <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic leading-none">Warehouse Mapping</h1>
-            <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mt-4 ml-1">QR Location Engine & Stock Control</p>
+            <h1 className="text-2xl sm:text-3xl md:text-5xl font-black uppercase tracking-tighter italic leading-none">Warehouse Mapping</h1>
+            <p className="text-slate-500 text-[11px] md:text-[10px] font-black uppercase tracking-widest md:tracking-[0.3em] mt-3 md:mt-4 ml-1">QR Location Engine & Stock Control</p>
           </div>
-          <button onClick={handlePrintAll} className="w-full md:w-auto bg-white text-black px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl hover:scale-105 transition-all">
+          <button onClick={handlePrintAll} className="w-full md:w-auto bg-white text-black px-8 py-3.5 md:py-3 rounded-xl font-black uppercase text-[12px] md:text-[10px] tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all min-h-[48px] md:min-h-0">
             Print All Labels
           </button>
         </div>
