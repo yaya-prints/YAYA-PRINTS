@@ -218,10 +218,15 @@ function PriorityQueuePageInner() {
     }
   }, [searchParams, activeJobs, sortedFilteredJobs, selectedJobId]);
 
+  // Mobile master/detail nav: on phones, viewer toggles between list and detail.
+  // Tapping a job opens detail; back button returns to list. lg+ shows both.
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
+
   // Centralized "select this job" — used by clicks AND keyboard nav.
   // Updates state + URL together so they can never go out of sync.
   const selectJob = useCallback((jobId: string) => {
     setSelectedJobId(jobId);
+    setMobileDetailOpen(true);
     // Push URL change without triggering a re-render avalanche
     if (typeof window !== "undefined") {
       window.history.replaceState(null, "", `/queue?job=${jobId}`);
@@ -445,14 +450,14 @@ function PriorityQueuePageInner() {
     <div className={`${t.pageBg} ${t.pageText} min-h-screen`}>
       {/* ─── HEADER ───────────────────────────────────────────────────────── */}
       <header className={`sticky top-0 z-20 ${t.panelBg} border-b ${t.panelBorder} backdrop-blur-md`}>
-        <div className="px-4 md:px-6 py-3 flex items-center gap-3 flex-wrap">
-          <Link href="/customers" className={`${t.textMuted} hover:${t.textStrong} text-[10px] font-black uppercase tracking-widest transition-colors`}>← Customers</Link>
-          <div className={`w-px h-5 ${t.panelBorder} border-l`}></div>
-          <div className="flex items-center gap-2">
+        <div className="px-3 sm:px-4 md:px-6 py-3 flex items-center gap-2 sm:gap-3 flex-wrap">
+          <Link href="/customers" className={`${t.textMuted} hover:${t.textStrong} text-[11px] sm:text-[10px] font-black uppercase tracking-widest transition-colors min-h-[36px] flex items-center`}>← <span className="hidden sm:inline">Customers</span></Link>
+          <div className={`w-px h-5 ${t.panelBorder} border-l hidden sm:block`}></div>
+          <div className="flex items-center gap-2 min-w-0">
             <span className="text-2xl leading-none">🔥</span>
-            <div>
-              <h1 className="text-lg md:text-xl font-black uppercase italic tracking-tight leading-none">Priority Queue</h1>
-              <div className={`text-[9px] font-black uppercase tracking-widest ${t.textMuted}`}>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg md:text-xl font-black uppercase italic tracking-tight leading-none truncate">Priority Queue</h1>
+              <div className={`text-[10px] sm:text-[9px] font-black uppercase tracking-widest ${t.textMuted}`}>
                 {sortedFilteredJobs.length} active
               </div>
             </div>
@@ -463,8 +468,8 @@ function PriorityQueuePageInner() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search jobs, customers, #… (⌘K)"
-            className={`${t.inputBg} border rounded-lg px-3 py-1.5 text-[11px] font-bold outline-none focus:border-rose-500 transition-colors w-48 md:w-64`}
+            placeholder="Search…"
+            className={`${t.inputBg} border rounded-lg px-3 py-2 text-[12px] sm:text-[11px] font-bold outline-none focus:border-rose-500 transition-colors w-full sm:w-48 md:w-64 min-h-[40px] sm:min-h-0 order-last sm:order-none`}
           />
         </div>
 
@@ -472,21 +477,21 @@ function PriorityQueuePageInner() {
         <div className={`border-t ${t.panelBorder}`}>
 
           {/* ROW 1 — view + date range + renumber (the "what am I looking at" row) */}
-          <div className={`px-4 md:px-6 py-2 flex items-center gap-2 flex-wrap text-[9px]`}>
+          <div className={`px-3 sm:px-4 md:px-6 py-2 flex items-center gap-2 overflow-x-auto md:flex-wrap no-scrollbar text-[10px] sm:text-[9px]`}>
             {/* VIEW TOGGLE — segmented */}
-            <div className={`flex rounded-md border ${t.panelBorder} overflow-hidden shadow-sm`}>
+            <div className={`flex rounded-md border ${t.panelBorder} overflow-hidden shadow-sm shrink-0`}>
               <button onClick={() => setViewMode("list")}
-                className={`px-3 py-1.5 font-black uppercase tracking-widest transition-colors ${viewMode === "list" ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : `${t.textMuted} hover:${t.textStrong}`}`}>
+                className={`px-3 py-2 sm:py-1.5 font-black uppercase tracking-widest transition-colors ${viewMode === "list" ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : `${t.textMuted} hover:${t.textStrong}`}`}>
                 ☰ List
               </button>
               <button onClick={() => setViewMode("grid")}
-                className={`px-3 py-1.5 font-black uppercase tracking-widest transition-colors ${viewMode === "grid" ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : `${t.textMuted} hover:${t.textStrong}`}`}>
+                className={`px-3 py-2 sm:py-1.5 font-black uppercase tracking-widest transition-colors ${viewMode === "grid" ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : `${t.textMuted} hover:${t.textStrong}`}`}>
                 ▦ Grid
               </button>
             </div>
 
             {/* DATE RANGE — emerald-themed (date = "freshness") */}
-            <span className={`ml-2 font-black uppercase tracking-widest ${t.textMuted}`}>Show:</span>
+            <span className={`ml-2 font-black uppercase tracking-widest ${t.textMuted} shrink-0`}>Show:</span>
             {[
               { id: "week",          label: "Past Week" },
               { id: "month",         label: "Past Month" },
@@ -494,25 +499,25 @@ function PriorityQueuePageInner() {
               { id: "all",           label: "All" },
             ].map(d => (
               <button key={d.id} onClick={() => setDateRange(d.id as any)}
-                className={`px-2.5 py-1 rounded-md font-black uppercase tracking-widest transition-colors ${dateRange === d.id ? "bg-emerald-500/20 text-emerald-600 border border-emerald-500/50" : `${t.textMuted} hover:${t.textStrong} border border-transparent`}`}>
+                className={`px-3 py-2 sm:px-2.5 sm:py-1 rounded-md font-black uppercase tracking-widest transition-colors shrink-0 whitespace-nowrap ${dateRange === d.id ? "bg-emerald-500/20 text-emerald-600 border border-emerald-500/50" : `${t.textMuted} hover:${t.textStrong} border border-transparent`}`}>
                 {d.label}
               </button>
             ))}
 
-            <div className="flex-1"></div>
+            <div className="flex-1 hidden md:block"></div>
 
             <button
               onClick={handleRenumber}
-              className="px-3 py-1.5 rounded-md font-black uppercase tracking-widest bg-rose-500 text-white hover:bg-rose-400 transition-colors shadow-sm"
+              className="px-3 py-2 sm:py-1.5 rounded-md font-black uppercase tracking-widest bg-rose-500 text-white hover:bg-rose-400 transition-colors shadow-sm shrink-0 whitespace-nowrap"
               title="Renumber all visible jobs as 1, 2, 3… in current order"
             >
-              ↺ Renumber 1,2,3
+              ↺ Renumber
             </button>
           </div>
 
           {/* ROW 2 — sort (sky blue, "ordering" semantic) */}
-          <div className={`px-4 md:px-6 py-2 flex items-center gap-2 flex-wrap text-[9px] border-t ${t.panelBorder}`}>
-            <span className={`font-black uppercase tracking-widest ${t.textMuted}`}>Sort:</span>
+          <div className={`px-3 sm:px-4 md:px-6 py-2 flex items-center gap-2 overflow-x-auto md:flex-wrap no-scrollbar text-[10px] sm:text-[9px] border-t ${t.panelBorder}`}>
+            <span className={`font-black uppercase tracking-widest ${t.textMuted} shrink-0`}>Sort:</span>
             {[
               { id: "priority", label: "Priority" },
               { id: "due",      label: "Due Date" },
@@ -520,17 +525,17 @@ function PriorityQueuePageInner() {
               { id: "customer", label: "Customer" },
             ].map(s => (
               <button key={s.id} onClick={() => setSortMode(s.id as any)}
-                className={`px-2.5 py-1 rounded-md font-black uppercase tracking-widest transition-colors ${sortMode === s.id ? "bg-sky-500/20 text-sky-600 border border-sky-500/50" : `${t.textMuted} hover:${t.textStrong} border border-transparent`}`}>
+                className={`px-3 py-2 sm:px-2.5 sm:py-1 rounded-md font-black uppercase tracking-widest transition-colors shrink-0 whitespace-nowrap ${sortMode === s.id ? "bg-sky-500/20 text-sky-600 border border-sky-500/50" : `${t.textMuted} hover:${t.textStrong} border border-transparent`}`}>
                 {s.label}
               </button>
             ))}
           </div>
 
           {/* ROW 3 — stage filter (each chip in ITS OWN stage color) */}
-          <div className={`px-4 md:px-6 py-2 flex items-center gap-2 flex-wrap text-[9px] border-t ${t.panelBorder}`}>
-            <span className={`font-black uppercase tracking-widest ${t.textMuted}`}>Stage:</span>
+          <div className={`px-3 sm:px-4 md:px-6 py-2 flex items-center gap-2 overflow-x-auto md:flex-wrap no-scrollbar text-[10px] sm:text-[9px] border-t ${t.panelBorder}`}>
+            <span className={`font-black uppercase tracking-widest ${t.textMuted} shrink-0`}>Stage:</span>
             <button onClick={() => setStageFilter("all")}
-              className={`px-2.5 py-1 rounded-md font-black uppercase tracking-widest transition-colors ${stageFilter === "all" ? `${isLightMode ? "bg-slate-900 text-white" : "bg-white text-slate-900"} border border-transparent` : `${t.textMuted} hover:${t.textStrong} border border-transparent`}`}>
+              className={`px-3 py-2 sm:px-2.5 sm:py-1 rounded-md font-black uppercase tracking-widest transition-colors shrink-0 whitespace-nowrap ${stageFilter === "all" ? `${isLightMode ? "bg-slate-900 text-white" : "bg-white text-slate-900"} border border-transparent` : `${t.textMuted} hover:${t.textStrong} border border-transparent`}`}>
               All ({activeJobs.length})
             </button>
             {availableStages.map(s => {
@@ -539,7 +544,7 @@ function PriorityQueuePageInner() {
               const active = stageFilter === s;
               return (
                 <button key={s} onClick={() => setStageFilter(s)}
-                  className={`px-2.5 py-1 rounded-md font-black uppercase tracking-widest transition-colors flex items-center gap-1.5 ${active ? `${ss.bg} ${ss.text} border ${ss.border} shadow-sm` : `${t.textMuted} hover:${t.textStrong} border border-transparent`}`}>
+                  className={`px-3 py-2 sm:px-2.5 sm:py-1 rounded-md font-black uppercase tracking-widest transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap ${active ? `${ss.bg} ${ss.text} border ${ss.border} shadow-sm` : `${t.textMuted} hover:${t.textStrong} border border-transparent`}`}>
                   {/* Color dot — always visible so users learn the legend */}
                   <span className={`w-1.5 h-1.5 rounded-full ${ss.solid}`}></span>
                   {s}
@@ -554,10 +559,10 @@ function PriorityQueuePageInner() {
 
       {/* ─── BODY: master/detail (LIST view) ────────────────────────────── */}
       {viewMode === "list" && (
-      <div className="flex flex-col lg:flex-row gap-0 h-[calc(100vh-104px)]">
+      <div className="flex flex-col lg:flex-row gap-0 lg:h-[calc(100dvh-104px)]">
 
         {/* ─── LIST (LEFT RAIL) ─── */}
-        <div ref={listRef} className={`w-full lg:w-[400px] xl:w-[440px] shrink-0 border-r ${t.panelBorder} overflow-y-auto`}>
+        <div ref={listRef} className={`${mobileDetailOpen ? "hidden lg:block" : "block"} w-full lg:w-[400px] xl:w-[440px] shrink-0 border-r ${t.panelBorder} lg:overflow-y-auto`}>
           {sortedFilteredJobs.length === 0 ? (
             <div className={`p-12 text-center ${t.textMuted}`}>
               <div className="text-4xl mb-3 opacity-50">🌴</div>
@@ -633,9 +638,16 @@ function PriorityQueuePageInner() {
         </div>
 
         {/* ─── DETAIL (RIGHT PANE) ─── */}
-        <div className="flex-1 overflow-y-auto">
+        <div className={`${mobileDetailOpen ? "block" : "hidden lg:block"} flex-1 lg:overflow-y-auto`}>
           {selectedJob ? (
             <div className="p-4 md:p-6 lg:p-8 space-y-5 max-w-5xl">
+              {/* MOBILE-ONLY: Back to list */}
+              <button
+                onClick={() => setMobileDetailOpen(false)}
+                className={`lg:hidden flex items-center gap-1.5 px-3 py-2 -mt-1 mb-1 rounded-lg ${t.textMuted} hover:${t.textStrong} text-[11px] font-black uppercase tracking-widest transition-colors min-h-[40px] active:scale-95`}
+              >
+                ← Back to list
+              </button>
               {/* TITLE BLOCK */}
               <div className="flex flex-col md:flex-row md:items-start gap-4">
                 {/* Customer logo */}

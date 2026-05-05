@@ -423,24 +423,24 @@ export default function ProductionBoard() {
   };
 
   return (
-    <div className="h-[calc(100vh-70px)] flex flex-col bg-slate-50 dark:bg-[#0f1115] text-slate-900 dark:text-white overflow-hidden relative font-sans transition-colors duration-300">
-      
+    <div className="h-[calc(100dvh-72px)] md:h-[calc(100vh-70px)] flex flex-col bg-slate-50 dark:bg-[#0f1115] text-slate-900 dark:text-white overflow-hidden relative font-sans transition-colors duration-300">
+
       {/* HEADER */}
-      <div className="px-4 md:px-8 py-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/5 z-10 flex flex-col gap-4 shrink-0 transition-colors duration-300">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="px-3 sm:px-4 md:px-8 py-3 md:py-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/5 z-10 flex flex-col gap-3 md:gap-4 shrink-0 transition-colors duration-300">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-4">
           <div className="flex justify-between w-full md:w-auto md:gap-12">
              <div>
                <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Board Value</div>
-               <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 tracking-tighter italic">${totalBoardValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+               <div className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 tracking-tighter italic">${totalBoardValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
              </div>
              <div className="text-right">
                <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Active Output</div>
-               <div className="text-xl font-black text-slate-900 dark:text-white tracking-tighter italic">{filteredJobs.length} Jobs</div>
+               <div className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tighter italic">{filteredJobs.length} Jobs</div>
              </div>
           </div>
           <div className="flex flex-col md:flex-row gap-2 items-stretch md:items-center w-full md:w-auto">
             {/* Date preset chips */}
-            <div className="flex gap-1 p-1 bg-slate-100 dark:bg-black border border-slate-300 dark:border-slate-700 rounded-xl">
+            <div className="flex gap-1 p-1 bg-slate-100 dark:bg-black border border-slate-300 dark:border-slate-700 rounded-xl overflow-x-auto no-scrollbar">
               {([
                 { id: "today",        label: "Today" },
                 { id: "week",         label: "7d" },
@@ -452,7 +452,7 @@ export default function ProductionBoard() {
                 <button
                   key={p.id}
                   onClick={() => setDatePreset(p.id)}
-                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                  className={`px-3 py-2 sm:px-2.5 sm:py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap shrink-0 ${
                     datePreset === p.id
                       ? "bg-sky-500 text-white shadow"
                       : "text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800"
@@ -467,7 +467,7 @@ export default function ProductionBoard() {
             <select
               value={dateField}
               onChange={(e) => setDateField(e.target.value as any)}
-              className="bg-slate-100 dark:bg-black border border-slate-300 dark:border-slate-700 rounded-xl py-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 outline-none focus:border-sky-500"
+              className="bg-slate-100 dark:bg-black border border-slate-300 dark:border-slate-700 rounded-xl py-2.5 sm:py-2 px-3 text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 outline-none focus:border-sky-500 min-h-[44px] sm:min-h-0"
               title="Which date the filter checks against"
             >
               <option value="created_at">By Created</option>
@@ -495,7 +495,7 @@ export default function ProductionBoard() {
 
             <input
               type="text" placeholder="Search Job #..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-slate-100 dark:bg-black border border-slate-300 dark:border-slate-700 rounded-xl py-3 px-5 text-sm w-full md:w-[280px] focus:border-sky-500 outline-none transition-all placeholder-slate-400 dark:placeholder-slate-600 font-bold text-slate-900 dark:text-white shadow-inner"
+              className="bg-slate-100 dark:bg-black border border-slate-300 dark:border-slate-700 rounded-xl py-3 px-4 sm:px-5 text-sm w-full md:w-[280px] min-h-[44px] focus:border-sky-500 outline-none transition-all placeholder-slate-400 dark:placeholder-slate-600 font-bold text-slate-900 dark:text-white shadow-inner"
             />
           </div>
         </div>
@@ -518,10 +518,10 @@ export default function ProductionBoard() {
             }).length;
 
             return (
-            <button 
-              key={s.name} 
-              onClick={() => scrollToStage(s.name)} 
-              className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm hover:scale-105 active:scale-95 snap-start ${s.color}`}
+            <button
+              key={s.name}
+              onClick={() => scrollToStage(s.name)}
+              className={`px-4 sm:px-5 py-3 sm:py-2.5 rounded-xl text-[11px] sm:text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm hover:scale-105 active:scale-95 snap-start min-h-[44px] sm:min-h-0 ${s.color}`}
             >
               {s.label} <span className="opacity-70 ml-1">({count})</span>
             </button>
@@ -578,9 +578,9 @@ export default function ProductionBoard() {
                     <div onClick={() => setEditingJob(job)} className="font-black text-lg mb-1 text-slate-900 dark:text-white leading-none cursor-pointer group-hover:text-sky-500 dark:group-hover:text-sky-400 truncate">{job.quotes?.customers?.company_name || "Internal"}</div>
                     <div className="text-[10px] font-black text-slate-500 mb-4 uppercase truncate">{getJobTitle(job)}</div>
                     
-                    <div className="flex justify-between items-center mt-2 border-t border-slate-100 dark:border-white/5 pt-4">
-                        <button onClick={(e) => updateStage(e, job, 'back')} className={`px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[9px] font-black rounded-lg transition hover:bg-slate-200 dark:hover:bg-slate-700 uppercase`}>← Back</button>
-                        <button onClick={(e) => updateStage(e, job, 'next')} className={`px-4 py-2 ${stage.color} text-[9px] font-black rounded-lg transition hover:scale-105 uppercase shadow-sm`}>Move →</button>
+                    <div className="flex justify-between items-center mt-2 border-t border-slate-100 dark:border-white/5 pt-4 gap-2">
+                        <button onClick={(e) => updateStage(e, job, 'back')} className={`px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] sm:text-[9px] font-black rounded-lg transition hover:bg-slate-200 dark:hover:bg-slate-700 uppercase min-h-[44px] flex items-center justify-center active:scale-95`}>← Back</button>
+                        <button onClick={(e) => updateStage(e, job, 'next')} className={`px-4 py-2.5 ${stage.color} text-[10px] sm:text-[9px] font-black rounded-lg transition hover:scale-105 active:scale-95 uppercase shadow-sm min-h-[44px] flex items-center justify-center`}>Move →</button>
                     </div>
                   </div>
                 ))}
