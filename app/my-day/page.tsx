@@ -1698,10 +1698,76 @@ export default function MyDayPage() {
         {/* ─── COL 3 · TODAY'S AGENDA / DEADLINES / TEAM / MACHINES ─────── */}
         <div className="hidden xl:flex xl:col-span-2 flex-col gap-4 min-w-0">
           <PanelShell title="Today's Agenda" badge={String(scheduledTasks.length)}>
-            <div className="text-[11px] text-slate-400 dark:text-slate-500">Phase C — coming up next</div>
+            {scheduledTasks.length === 0 ? (
+              <div className="text-[11px] text-slate-400 dark:text-slate-500 text-center py-2">No scheduled tasks</div>
+            ) : (
+              <ul className="flex flex-col">
+                {scheduledTasks.slice(0, 8).map((t, i) => {
+                  const cat = CATEGORIES.find(c => c.id === t.category) || CATEGORIES[0];
+                  const cls = CATEGORY_CLASSES[cat.color];
+                  const last = i === Math.min(scheduledTasks.length, 8) - 1;
+                  return (
+                    <li key={t.id} className="relative pl-5 pb-3 last:pb-0">
+                      {/* connector line */}
+                      {!last && <span className="absolute left-1.5 top-3 bottom-0 w-px bg-slate-200 dark:bg-slate-800" />}
+                      {/* dot */}
+                      <span className={`absolute left-0 top-1.5 w-3 h-3 rounded-full ${cls.chip} ring-2 ring-white dark:ring-slate-950`} />
+                      <button
+                        onClick={() => setEditingTask(t)}
+                        className="w-full text-left group"
+                      >
+                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                          {fmt12hr(t.target_time)}
+                        </div>
+                        <div className={`text-[12px] font-bold leading-tight truncate ${t.is_completed ? "line-through text-slate-400" : "text-slate-900 dark:text-slate-100 group-hover:text-sky-500"}`}>
+                          {t.title}
+                        </div>
+                        {(t.jobs || t.customers) && (
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                            {t.jobs && <span className="text-orange-500 mr-1.5">#{t.jobs.job_number}</span>}
+                            {t.customers?.company_name && <span>{t.customers.company_name}</span>}
+                          </div>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </PanelShell>
-          <PanelShell title="Urgent Deadlines" badge={String(rushJobsCount)} accent="rose">
-            <div className="text-[11px] text-slate-400 dark:text-slate-500">Phase C</div>
+
+          <PanelShell title="Urgent Deadlines" badge={String(rushJobsCount + tasks.filter(t => !t.is_completed && t.target_date === selectedDate && t.priority !== "urgent" && t.priority !== "high" && /rush/i.test(t.title || "")).length)} accent="rose">
+            {(() => {
+              const urgent = tasks
+                .filter(t => !t.is_completed && (t.priority === "urgent" || t.priority === "high" || /rush/i.test(t.title || "")))
+                .sort((a, b) => minsFromTime(a.target_time) - minsFromTime(b.target_time));
+              if (urgent.length === 0) {
+                return <div className="text-[11px] text-slate-400 dark:text-slate-500 text-center py-2">No urgent deadlines today</div>;
+              }
+              return (
+                <ul className="flex flex-col gap-2">
+                  {urgent.slice(0, 6).map(t => (
+                    <li key={t.id}>
+                      <button
+                        onClick={() => setEditingTask(t)}
+                        className="w-full text-left p-2 rounded-lg border border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10 transition-colors group"
+                      >
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          {t.jobs && <span className="text-[10px] font-black text-orange-500">#{t.jobs.job_number}</span>}
+                          <span className="text-[12px] font-bold text-slate-900 dark:text-slate-100 truncate flex-1 group-hover:text-sky-500">
+                            {t.customers?.company_name || t.title}
+                          </span>
+                          <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-rose-500 text-white shrink-0">RUSH</span>
+                        </div>
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-rose-500">
+                          Due {isToday ? "Today" : selectedDate} {t.target_time ? fmt12hr(t.target_time) : ""}
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              );
+            })()}
           </PanelShell>
           <PanelShell title="Team Availability">
             <div className="text-[11px] text-slate-400 dark:text-slate-500">Phase E</div>
