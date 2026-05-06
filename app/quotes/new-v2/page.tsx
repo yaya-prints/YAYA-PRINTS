@@ -205,6 +205,23 @@ export default function CreateNewOrderV2() {
   const [packagingNotes, setPackagingNotes] = useState("");
   const [qcNotes, setQcNotes] = useState("");
 
+  // ---- WORKFLOW STATE ------------------------------------------------------
+  // 7 fixed steps, in order. `completedAt` doubles as the "is completed" flag.
+  type Step = { id: string; label: string; completedAt: number | null };
+  const [steps, setSteps] = useState<Step[]>(() => [
+    { id: "quote-sent",          label: "Quote Sent",         completedAt: null },
+    { id: "artwork-approval",    label: "Artwork Approval",   completedAt: null },
+    { id: "deposit-received",    label: "Deposit Received",   completedAt: null },
+    { id: "to-buy",              label: "To Buy",             completedAt: null },
+    { id: "to-print",            label: "To Print",           completedAt: null },
+    { id: "to-press",            label: "To Press",           completedAt: null },
+    { id: "ready-for-pickup",    label: "Ready for Pickup",   completedAt: null },
+  ]);
+  const toggleStep = (id: string) =>
+    setSteps(prev => prev.map(s => s.id === id ? { ...s, completedAt: s.completedAt ? null : Date.now() } : s));
+  const completedSteps = steps.filter(s => s.completedAt).length;
+  const progressPct = (completedSteps / steps.length) * 100;
+
   // ---- ARTWORK FILES STATE -------------------------------------------------
   // Persisted so we can survive a page refresh during a long order build.
   // Each file is a session-scoped draft id; on save (Phase 6) the rows get
@@ -1056,8 +1073,55 @@ export default function CreateNewOrderV2() {
             </div>
           </SectionCard>
 
-          {/* SECTION 8 — Workflow / Next Steps (full width) — Phase 5 ------- */}
-          <SectionCard t={t} num={8} title="Workflow / Next Steps" hint="Phase 5" className="md:col-span-2 xl:col-span-12" placeholder="Quote Sent → Artwork Approval → Deposit → To Buy → To Print → To Press → Packaging → Ready" />
+          {/* SECTION 8 — Workflow / Next Steps (full width) ----------------- */}
+          <SectionCard t={t} num={8} title="Workflow / Next Steps" className="md:col-span-2 xl:col-span-12">
+            <div className="flex items-start gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
+              {steps.map((step, i) => {
+                const done = !!step.completedAt;
+                const next = !done && (i === 0 || !!steps[i - 1].completedAt);
+                return (
+                  <div key={step.id} className="flex items-start gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => toggleStep(step.id)}
+                      className={`group flex flex-col items-center gap-1.5 min-w-[110px] active:scale-95 transition-transform`}
+                      title={done ? "Click to undo" : "Click to mark complete"}
+                    >
+                      <div className={`relative w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-black border-2 transition-all ${
+                        done
+                          ? "bg-emerald-500 text-white border-emerald-400 shadow-[0_4px_14px_-4px_rgba(16,185,129,0.7)]"
+                          : next
+                            ? "bg-sky-500 text-white border-sky-400 shadow-[0_4px_14px_-4px_rgba(14,165,233,0.7)]"
+                            : isLight
+                              ? "bg-white border-slate-300 text-slate-500"
+                              : "bg-white/[0.04] border-white/15 text-slate-500"
+                      }`}>
+                        {done ? "✓" : i + 1}
+                      </div>
+                      <span className={`text-[10px] font-black uppercase tracking-widest text-center leading-tight ${
+                        done ? "text-emerald-500" : next ? "text-sky-500" : t.textMuted
+                      }`}>
+                        {step.label}
+                      </span>
+                      <span className={`text-[9px] font-bold uppercase tracking-widest ${
+                        done ? "text-emerald-500/70" : next ? "text-sky-500/70" : isLight ? "text-slate-400" : "text-slate-600"
+                      }`}>
+                        {done ? "Done" : next ? "In Progress" : "Pending"}
+                      </span>
+                    </button>
+                    {i < steps.length - 1 && (
+                      <div className={`mt-4 w-8 h-0.5 rounded shrink-0 transition-colors ${
+                        done ? "bg-emerald-500" : isLight ? "bg-slate-200" : "bg-white/10"
+                      }`} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className={`text-[10px] font-black uppercase tracking-widest ${t.textMuted} mt-3 text-center`}>
+              Process will begin after order is created.
+            </div>
+          </SectionCard>
         </div>
 
         {/* ─── RIGHT SIDEBAR ───────────────────────────────────────────────── */}
@@ -1096,22 +1160,119 @@ export default function CreateNewOrderV2() {
             </dl>
           </div>
 
-          {/* Timeline / Checklist (Phase 5 placeholder) */}
-          <div className={`${t.cardBg} ${t.cardBorder} ${t.cardShadow} border rounded-xl overflow-hidden opacity-60`}>
+          {/* Timeline / Checklist — live mirror of Section 8 */}
+          <div className={`${t.cardBg} ${t.cardBorder} ${t.cardShadow} border rounded-xl overflow-hidden`}>
             <header className={`flex items-center justify-between gap-3 px-3.5 py-2.5 border-b ${t.cardBorder}`}>
               <h3 className={`text-[11px] font-black uppercase tracking-widest ${t.text}`}>Timeline / Checklist</h3>
-              <span className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${isLight ? 'bg-slate-100 text-slate-500' : 'bg-white/[0.04] text-slate-500'}`}>Phase 5</span>
+              <span className={`text-[10px] font-black uppercase tracking-widest ${completedSteps > 0 ? "text-emerald-500" : t.textMuted}`}>
+                {completedSteps} of {steps.length}
+              </span>
             </header>
-            <div className={`px-3.5 py-4 text-center text-[11px] ${t.textMuted}`}>0 of 7 steps</div>
+            {/* Progress bar */}
+            <div className={`h-1.5 ${isLight ? "bg-slate-100" : "bg-black/40"}`}>
+              <div className="h-full bg-gradient-to-r from-sky-500 to-emerald-500 transition-all duration-500" style={{ width: `${progressPct}%` }} />
+            </div>
+            <ul className="px-3.5 py-2.5 flex flex-col gap-1.5">
+              {steps.map((s) => {
+                const done = !!s.completedAt;
+                return (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      onClick={() => toggleStep(s.id)}
+                      className={`w-full flex items-center gap-2 py-1 group active:scale-[0.98] transition-transform`}
+                    >
+                      <span className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black border ${
+                        done ? "bg-emerald-500 text-white border-emerald-400" : isLight ? "bg-white border-slate-300" : "bg-white/[0.04] border-white/15"
+                      }`}>
+                        {done && "✓"}
+                      </span>
+                      <span className={`text-[11px] font-bold flex-1 text-left ${
+                        done ? `${t.textMuted} line-through` : t.text
+                      }`}>
+                        {s.label}
+                      </span>
+                      <span className={`text-[9px] font-black uppercase tracking-widest ${
+                        done ? "text-emerald-500" : t.textMuted
+                      }`}>
+                        {done ? "Done" : "Pending"}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
 
-          {/* Mockup Preview (Phase 5 placeholder) */}
-          <div className={`${t.cardBg} ${t.cardBorder} ${t.cardShadow} border rounded-xl overflow-hidden opacity-60`}>
+          {/* Mockup Preview — pulls images from Section 5 */}
+          <div className={`${t.cardBg} ${t.cardBorder} ${t.cardShadow} border rounded-xl overflow-hidden`}>
             <header className={`flex items-center justify-between gap-3 px-3.5 py-2.5 border-b ${t.cardBorder}`}>
               <h3 className={`text-[11px] font-black uppercase tracking-widest ${t.text}`}>Mockup Preview</h3>
-              <span className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${isLight ? 'bg-slate-100 text-slate-500' : 'bg-white/[0.04] text-slate-500'}`}>Phase 5</span>
+              {files.filter(f => f.isImage).length > 0 && (
+                <span className={`text-[9px] font-black uppercase tracking-widest ${t.textMuted}`}>
+                  {files.filter(f => f.isImage).length} image{files.filter(f => f.isImage).length === 1 ? "" : "s"}
+                </span>
+              )}
             </header>
-            <div className={`aspect-[16/10] flex items-center justify-center text-[11px] ${t.textMuted}`}>No mockups attached</div>
+            {(() => {
+              const imgs = files.filter(f => f.isImage);
+              if (imgs.length === 0) {
+                return <div className={`aspect-[16/10] flex flex-col items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-widest ${t.textMuted}`}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                  <span>No mockups attached</span>
+                  <span className={`text-[9px] font-medium normal-case ${t.textMuted}`}>upload artwork in Section 5</span>
+                </div>;
+              }
+              const cover = imgs[0];
+              return (
+                <div className="flex flex-col">
+                  <a href={cover.url} target="_blank" rel="noopener noreferrer" className="block aspect-[16/10] overflow-hidden bg-black/40">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={cover.url} alt={cover.name} className="w-full h-full object-contain" />
+                  </a>
+                  {imgs.length > 1 && (
+                    <div className={`flex gap-1.5 px-2.5 py-2 overflow-x-auto no-scrollbar border-t ${t.cardBorder}`}>
+                      {imgs.slice(1, 7).map(im => (
+                        <a key={im.id} href={im.url} target="_blank" rel="noopener noreferrer" className={`shrink-0 w-12 h-12 rounded-md overflow-hidden border ${t.cardBorder}`} title={im.name}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={im.url} alt={im.name} className="w-full h-full object-cover" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Recent Activity — synthesized from current form state */}
+          <div className={`${t.cardBg} ${t.cardBorder} ${t.cardShadow} border rounded-xl overflow-hidden`}>
+            <header className={`flex items-center justify-between gap-3 px-3.5 py-2.5 border-b ${t.cardBorder}`}>
+              <h3 className={`text-[11px] font-black uppercase tracking-widest ${t.text}`}>Recent Activity</h3>
+            </header>
+            <ul className="px-3.5 py-2.5 flex flex-col gap-1.5 text-[11px]">
+              {(() => {
+                const acts: { label: string; meta: string; color: string }[] = [];
+                if (selectedCustomer) acts.push({ label: "Customer linked", meta: selectedCustomer.company_name, color: "sky" });
+                else if (companyName) acts.push({ label: "Customer drafted", meta: companyName, color: "slate" });
+                if (lines.some(l => l.description)) acts.push({ label: "Items added", meta: `${lines.filter(l => l.description).length} line${lines.filter(l => l.description).length === 1 ? "" : "s"}`, color: "emerald" });
+                if (files.length > 0) acts.push({ label: "Artwork uploaded", meta: `${files.length} file${files.length === 1 ? "" : "s"}`, color: "violet" });
+                if (rushOrder) acts.push({ label: "Rush order flag", meta: "+15% surcharge", color: "rose" });
+                if (completedSteps > 0) acts.push({ label: "Workflow advanced", meta: `${completedSteps} step${completedSteps === 1 ? "" : "s"} done`, color: "amber" });
+                if (acts.length === 0) {
+                  return <li className={`text-center py-2 text-[10px] font-bold uppercase tracking-widest ${t.textMuted}`}>Activity will appear here as you build the order</li>;
+                }
+                return acts.map((a, i) => (
+                  <li key={i} className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span className={`w-1.5 h-1.5 rounded-full bg-${a.color}-500 shrink-0`} />
+                      <span className={`text-[11px] font-bold ${t.text} truncate`}>{a.label}</span>
+                    </span>
+                    <span className={`text-[10px] font-bold ${t.textMuted} shrink-0`}>{a.meta}</span>
+                  </li>
+                ));
+              })()}
+            </ul>
           </div>
         </aside>
       </div>
