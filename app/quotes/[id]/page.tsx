@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
+import { parseYayaMeta } from "@/lib/yaya-meta";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 // --- DYNAMIC COLOR ENGINE ---
@@ -33,6 +34,26 @@ const parseDescription = (raw: string): { name: string; sides: string | null } =
 const isGeneralItem = (item: any): boolean => {
   return !item.quote_item_variants || item.quote_item_variants.length === 0;
 };
+
+// Tiny labelled-value cell used in the Production Details strip.
+function Stat({ label, value, mono, capitalize }: { label: string; value: string; mono?: boolean; capitalize?: boolean }) {
+  return (
+    <div className="flex flex-col gap-0.5 min-w-0">
+      <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{label}</span>
+      <span className={`text-[12px] font-black text-slate-800 dark:text-slate-100 truncate ${mono ? "font-mono" : ""} ${capitalize ? "capitalize" : ""}`}>{value}</span>
+    </div>
+  );
+}
+
+// Production-note column (Special / Packaging / QC).
+function NoteBlock({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{label}</span>
+      <p className="text-[12px] text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-snug">{value}</p>
+    </div>
+  );
+}
 
 // --- DYNAMIC GARMENT ICONS ---
 const renderGarmentIcon = (description: string, colorHex: string): ReactNode => {
@@ -644,6 +665,142 @@ export default function ProfessionalQuotePage() {
         </div>
       </div>
 
+      {/* PRODUCTION DETAILS — internal only, populated for orders saved via /quotes/new-v2 */}
+      {(() => {
+        const meta = parseYayaMeta(quote.internal_notes);
+        if (!meta) return null;
+
+        const completedSteps = (meta.workflowSteps ?? []).filter(s => s.completedAt).length;
+        const totalSteps = (meta.workflowSteps ?? []).length;
+
+        return (
+          <div className="w-full max-w-[210mm] mb-6 print:hidden px-2 sm:px-0 space-y-3">
+
+            {/* Order metadata strip */}
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+                <span className="text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-200">Production Details</span>
+                <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400">internal</span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-2.5 px-4 py-3 text-[12px]">
+                {meta.orderNumber  && <Stat label="Order #"   value={meta.orderNumber} mono />}
+                {meta.orderType    && <Stat label="Type"      value={meta.orderType} />}
+                {meta.salesRep     && <Stat label="Sales Rep" value={meta.salesRep} />}
+                {meta.paymentStatus && <Stat label="Payment"  value={`${meta.paymentStatus}${meta.paymentStatus === "Deposit Required" && meta.depositPercent != null ? ` (${meta.depositPercent}%)` : ""}`} />}
+                {meta.deliveryMethod && <Stat label="Delivery" value={meta.deliveryMethod} capitalize />}
+                {meta.rushOrder && <div className="flex flex-col gap-0.5"><span className="text-[9px] font-black uppercase tracking-widest text-rose-500">Rush Order</span><span className="text-[12px] font-black text-rose-500">⚡ +15%</span></div>}
+              </div>
+            </div>
+
+            {/* Print Specs */}
+            {(meta.printMethod || (meta.printLocations?.length ?? 0) > 0 || meta.numColors || meta.printNotes) && (
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+                <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-800">
+                  <span className="text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-200">Print Specifications</span>
+                </div>
+                <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-[12px]">
+                  {meta.printMethod && <Stat label="Method" value={meta.printMethod} />}
+                  {meta.numColors != null && <Stat label="Colors" value={String(meta.numColors)} />}
+                  {(meta.printLocations?.length ?? 0) > 0 && (
+                    <div className="sm:col-span-3 flex flex-col gap-1">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Locations ({meta.printLocations!.length})</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {meta.printLocations!.map(loc => (
+                          <span key={loc} className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">{loc}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {meta.printNotes && (
+                    <div className="sm:col-span-3 flex flex-col gap-1">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Notes</span>
+                      <p className="text-[12px] text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-snug">{meta.printNotes}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Internal Notes (3-column) */}
+            {(meta.specialInstructions || meta.packagingNotes || meta.qcNotes) && (
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+                <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-800">
+                  <span className="text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-200">Production Notes</span>
+                </div>
+                <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-[12px]">
+                  {meta.specialInstructions && <NoteBlock label="Special Instructions" value={meta.specialInstructions} />}
+                  {meta.packagingNotes      && <NoteBlock label="Packaging Notes"      value={meta.packagingNotes} />}
+                  {meta.qcNotes             && <NoteBlock label="QC Notes"             value={meta.qcNotes} />}
+                </div>
+              </div>
+            )}
+
+            {/* Artwork Files */}
+            {(meta.files?.length ?? 0) > 0 && (
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+                <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                  <span className="text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-200">Artwork Files</span>
+                  <span className="text-[10px] font-bold text-slate-500">
+                    {meta.files!.filter(f => f.status === "print-ready").length} ready · {meta.files!.filter(f => f.status === "awaiting-approval").length} pending
+                  </span>
+                </div>
+                <ul className="px-4 py-3 flex flex-col gap-1.5">
+                  {meta.files!.map((f, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2 text-[12px]">
+                      <a href={f.url} target="_blank" rel="noopener noreferrer" className="font-bold text-slate-800 dark:text-slate-200 hover:text-sky-600 truncate flex items-center gap-2">
+                        <span>{f.isImage ? "🖼️" : "📄"}</span>
+                        <span className="truncate">{f.name}</span>
+                      </a>
+                      <span className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded shrink-0 ${
+                        f.status === "print-ready"
+                          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                          : "bg-amber-500/15 text-amber-700 dark:text-amber-400"
+                      }`}>
+                        {f.status === "print-ready" ? "✓ Ready" : "⏳ Pending"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Workflow */}
+            {totalSteps > 0 && (
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+                <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                  <span className="text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-200">Workflow</span>
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${completedSteps > 0 ? "text-emerald-500" : "text-slate-500"}`}>
+                    {completedSteps} of {totalSteps}
+                  </span>
+                </div>
+                <div className="h-1.5 bg-slate-100 dark:bg-black/40">
+                  <div className="h-full bg-gradient-to-r from-sky-500 to-emerald-500 transition-all" style={{ width: `${(completedSteps / totalSteps) * 100}%` }} />
+                </div>
+                <div className="px-4 py-3 flex items-start gap-2 overflow-x-auto">
+                  {meta.workflowSteps!.map((s, i) => {
+                    const done = !!s.completedAt;
+                    const next = !done && (i === 0 || !!meta.workflowSteps![i - 1].completedAt);
+                    return (
+                      <div key={s.id} className="flex flex-col items-center gap-1 min-w-[90px]">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black border-2 ${
+                          done ? "bg-emerald-500 text-white border-emerald-400" :
+                          next ? "bg-sky-500 text-white border-sky-400" :
+                          "bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-400"
+                        }`}>{done ? "✓" : i + 1}</div>
+                        <span className={`text-[9px] font-black uppercase tracking-widest text-center leading-tight ${
+                          done ? "text-emerald-500" : next ? "text-sky-500" : "text-slate-500"
+                        }`}>{s.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* DYNAMIC SCALING WRAPPER FOR MOBILE */}
       <div className="w-full flex justify-center pb-8 print:pb-0 overflow-hidden print:overflow-visible origin-top">
 
@@ -747,10 +904,7 @@ export default function ProfessionalQuotePage() {
                       return (
                         <tr key={`g-${row.item.id}-${idx}`} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                           <td className="py-2 pl-2 font-black tracking-tight align-middle">
-                            <div className="flex items-center">
-                              <div className="shrink-0">{renderGarmentIcon(row.parsedName, itemColorHex)}</div>
-                              <div className="whitespace-normal break-words leading-[1.1] pr-2 w-full">{row.parsedName}</div>
-                            </div>
+                            <div className="whitespace-normal break-words leading-[1.1] pr-2 w-full">{row.parsedName}</div>
                           </td>
                           <td className="py-2 text-center font-black bg-slate-50/50 align-middle">{row.qty}</td>
                           <td className="py-2 font-black whitespace-normal break-words pr-1 align-middle leading-[1.1]">
@@ -791,13 +945,8 @@ export default function ProfessionalQuotePage() {
                     return (
                       <tr key={`a-${v.id}`} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                         <td className="py-2 pl-2 font-black tracking-tight align-middle">
-                          <div className="flex items-center">
-                            <div className="shrink-0">
-                              {row.isFirstVariant ? renderGarmentIcon(row.parsedName, itemColorHex) : <span className="w-5 mr-2 block"></span>}
-                            </div>
-                            <div className="whitespace-normal break-words leading-[1.1] pr-2 w-full">
-                              {row.isFirstVariant ? row.parsedName : ""}
-                            </div>
+                          <div className="whitespace-normal break-words leading-[1.1] pr-2 w-full" style={{ color: row.isFirstVariant ? undefined : "transparent" }}>
+                            {row.isFirstVariant ? row.parsedName : "—"}
                           </div>
                         </td>
                         <td className="py-2 text-center font-black bg-slate-50/50 align-middle">{row.qty}</td>

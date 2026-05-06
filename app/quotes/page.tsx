@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { parseYayaMeta } from "@/lib/yaya-meta";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -801,6 +802,8 @@ export default function QuotesList() {
             const rawStage = quote.jobs?.[0]?.stage || "Incoming";
             const displayStage = DB_STAGE_MAP[rawStage] || rawStage;
             const stale = isStale(quote);
+            // Pull metadata saved by /quotes/new-v2 — null for legacy quotes
+            const meta = parseYayaMeta(quote.internal_notes);
 
             // Workflow state — 1/5, 2/5, etc.
             const workflowStep = quote.status === "Draft" ? 1 : quote.status === "Sent" ? 2 : isApproved && rawStage === "Incoming" ? 3 : isApproved && !["Incoming","Billing","Paid"].includes(rawStage) ? 4 : 5;
@@ -843,6 +846,22 @@ export default function QuotesList() {
                         {isApproved ? displayStage : quote.status}
                         <span className="opacity-60 font-mono">{workflowStep}/5</span>
                       </span>
+                      {/* New-v2 metadata chips — only render for orders saved through the new page */}
+                      {meta?.rushOrder && (
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-[0.2em] border flex items-center gap-1 ${isLightMode ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-rose-500/10 text-rose-400 border-rose-500/30'}`}>
+                          ⚡ Rush
+                        </span>
+                      )}
+                      {meta?.printMethod && (
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-[0.2em] border ${isLightMode ? 'bg-violet-50 text-violet-600 border-violet-200' : 'bg-violet-500/10 text-violet-400 border-violet-500/30'}`}>
+                          {meta.printMethod}
+                        </span>
+                      )}
+                      {(meta?.files?.length ?? 0) > 0 && (
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-[0.2em] border flex items-center gap-1 ${isLightMode ? 'bg-sky-50 text-sky-600 border-sky-200' : 'bg-sky-500/10 text-sky-400 border-sky-500/30'}`} title={`${meta!.files!.length} attached`}>
+                          📎 {meta!.files!.length}
+                        </span>
+                      )}
                     </div>
 
                     <div className="text-lg md:text-2xl font-black uppercase tracking-tighter truncate" title={quote.title || quote.customers?.company_name}>

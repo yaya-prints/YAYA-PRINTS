@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import type { YayaMeta } from "@/lib/yaya-meta";
 import { useRouter } from "next/navigation";
 
 // ---- TYPES ------------------------------------------------------------------
@@ -447,6 +448,28 @@ export default function CreateNewOrderV2() {
       lines.push("── ARTWORK FILES ──");
       files.forEach(f => lines.push(`• ${f.name} [${f.status === "print-ready" ? "✓ PRINT READY" : "⏳ AWAITING APPROVAL"}]: ${f.url}`));
     }
+
+    // Hidden machine-parseable sentinel — the quote/invoice detail pages
+    // grep for <!--YAYA-META … --> and read this JSON to render the
+    // Production Details panel. Keeps the pages in sync automatically:
+    // any field added to v2's saver ends up on the detail view without
+    // a schema migration.
+    const meta: YayaMeta = {
+      v: 1, // schema version
+      orderNumber, orderType, salesRep, paymentStatus, depositPercent, deliveryMethod,
+      rushOrder,
+      printMethod, printLocations, numColors, printNotes,
+      specialInstructions, packagingNotes, qcNotes,
+      pricing: {
+        subtotal, setupFees, addOnCharges, rushFee, shippingFee,
+        grandTotal, depositAmount, totalUnits,
+      },
+      files: files.map(f => ({ name: f.name, url: f.url, status: f.status, isImage: f.isImage })),
+      workflowSteps: steps.map(s => ({ id: s.id, label: s.label, completedAt: s.completedAt })),
+    };
+    lines.push("");
+    lines.push(`<!--YAYA-META ${JSON.stringify(meta)} -->`);
+
     return lines.join("\n");
   };
 
