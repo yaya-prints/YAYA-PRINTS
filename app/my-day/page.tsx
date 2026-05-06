@@ -1836,10 +1836,11 @@ function Timeline({ view, tasks, onToggle, onEdit, isToday, draggingJob, draggin
     return timeFromMins(clampedMin);
   };
 
-  // Magnetic snap: if the cursor lands inside an existing task's slot,
-  // shift the dragged card to either *before* or *after* that task
-  // (depending on which half of it the cursor is in). Gives the
-  // "auto-tucks under the card above" feel the user asked for.
+  // Magnetic snap: if the cursor lands in the *inner core* of an existing
+  // task, snap the dragged card to land directly below it. The 20% edge
+  // strips on each side are deliberately left to natural 30-min snap so
+  // continuous placement (drop right after the previous job) works without
+  // the magnet hijacking the cursor.
   const magneticSnap = (rawTime: string, currentDragId: string | null, draggedDuration: number): string => {
     const targetMins = minsFromTime(rawTime);
     const dur = Math.max(15, draggedDuration);
@@ -1847,20 +1848,18 @@ function Timeline({ view, tasks, onToggle, onEdit, isToday, draggingJob, draggin
       if (p.id === currentDragId) continue;
       const pStart = minsFromTime(p.target_time);
       const pEnd = pStart + (p.duration_minutes || 30);
-      // Hovering over this task block?
-      if (targetMins >= pStart - 5 && targetMins < pEnd + 5) {
-        const half = pStart + (pEnd - pStart) / 2;
-        let newStart;
-        if (targetMins < half) {
-          // Snap *above* — top edge of dragged sits at (pStart - draggedDuration)
-          newStart = pStart - dur;
-        } else {
-          // Snap *below* — top edge of dragged sits at pEnd
-          newStart = pEnd;
-        }
+      const length = pEnd - pStart;
+      // Only engage in the centre 60% of the card. Edge 20% top + 20%
+      // bottom is "free zone" so dropping right at a card boundary
+      // keeps its natural 30-min snap.
+      const innerStart = pStart + length * 0.2;
+      const innerEnd   = pEnd   - length * 0.2;
+      if (targetMins >= innerStart && targetMins < innerEnd) {
+        // Snap *below* the hovered card — the "auto-tuck under the card
+        // above" gesture the user asked for.
         const startBound = TIMELINE_START_HOUR * 60;
         const endBound = (TIMELINE_END_HOUR + 1) * 60 - dur;
-        const clamped = Math.min(Math.max(newStart, startBound), endBound);
+        const clamped = Math.min(Math.max(pEnd, startBound), endBound);
         return timeFromMins(Math.round(clamped / 30) * 30);
       }
     }
@@ -2034,44 +2033,64 @@ function Timeline({ view, tasks, onToggle, onEdit, isToday, draggingJob, draggin
                   ⚠ Overlap
                 </div>
               )}
-              <div className="px-2 pl-3 py-1.5 h-full flex flex-col gap-0.5">
-                {/* Row 1: checkbox + time chip + duration — always visible.
-                    Even on the minimum 28px slot, this row fits since we
-                    pinned title to the next line. */}
-                <div className="flex items-center gap-1.5">
+              {/* Card body — height-adaptive.
+                  • <50px (≤30-min slot): single ellipsized line shows time +
+                    duration + title + #job + customer all together. The
+                    user always sees "what" and "when" even on the smallest
+                    block; click opens the modal for full detail.
+                  • ≥50px: title gets its own line; time chip + duration on
+                    top, meta footer when the slot is tall enough. */}
+              {t._height < 50 ? (
+                <div className="pl-3 pr-2 py-1 h-full flex items-center gap-1.5 overflow-hidden">
                   <button onClick={(e) => { e.stopPropagation(); onToggle(t); }}
                     className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center shrink-0 ${
                       t.is_completed ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-400 hover:border-emerald-400"
                     }`}>
                     {t.is_completed && <span className="text-[8px] leading-none">✓</span>}
                   </button>
-                  <span className={`text-[10px] font-black font-mono tracking-tight ${cls.text}`}>{fmt12hr(t.target_time)}</span>
-                  <span className="text-[9px] font-bold opacity-50">·</span>
-                  <span className="text-[9px] font-bold uppercase tracking-widest opacity-60">{t.duration_minutes}m</span>
-                  {itemProgress && (
-                    <span className="text-[9px] font-black text-amber-500 ml-auto">☑ {itemProgress.done}/{itemProgress.total}</span>
-                  )}
-                  {actualBadge && !itemProgress && (
-                    <span className={`text-[9px] font-black uppercase tracking-widest ml-auto ${actualBadge.color}`}>{actualBadge.text}</span>
-                  )}
-                  {t.started_at && !t.is_completed && (
-                    <span className="text-[9px] font-black text-sky-500 animate-pulse ml-auto">● live</span>
+                  <span className={`text-[10px] font-black font-mono shrink-0 ${cls.text}`}>{fmt12hr(t.target_time)}</span>
+                  <span className="text-[9px] opacity-50 shrink-0">·</span>
+                  <span className="text-[9px] font-bold uppercase tracking-widest opacity-60 shrink-0">{t.duration_minutes}m</span>
+                  <span className="text-[9px] opacity-50 shrink-0">·</span>
+                  <span className={`text-[10px] font-black tracking-tight truncate ${t.is_completed ? "line-through opacity-50" : ""}`}>{t.title}</span>
+                  {t.jobs && <span className="text-[9px] font-black text-orange-500 shrink-0">#{t.jobs.job_number}</span>}
+                </div>
+              ) : (
+                <div className="px-2 pl-3 py-1.5 h-full flex flex-col gap-0.5 overflow-hidden">
+                  {/* Top strip: checkbox + time + duration + status chip */}
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={(e) => { e.stopPropagation(); onToggle(t); }}
+                      className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center shrink-0 ${
+                        t.is_completed ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-400 hover:border-emerald-400"
+                      }`}>
+                      {t.is_completed && <span className="text-[8px] leading-none">✓</span>}
+                    </button>
+                    <span className={`text-[10px] font-black font-mono tracking-tight ${cls.text}`}>{fmt12hr(t.target_time)}</span>
+                    <span className="text-[9px] font-bold opacity-50">·</span>
+                    <span className="text-[9px] font-bold uppercase tracking-widest opacity-60">{t.duration_minutes}m</span>
+                    {itemProgress && (
+                      <span className="text-[9px] font-black text-amber-500 ml-auto">☑ {itemProgress.done}/{itemProgress.total}</span>
+                    )}
+                    {actualBadge && !itemProgress && (
+                      <span className={`text-[9px] font-black uppercase tracking-widest ml-auto ${actualBadge.color}`}>{actualBadge.text}</span>
+                    )}
+                    {t.started_at && !t.is_completed && (
+                      <span className="text-[9px] font-black text-sky-500 animate-pulse ml-auto">● live</span>
+                    )}
+                  </div>
+                  {/* Title */}
+                  <div className={`text-[11px] font-black tracking-tight leading-tight line-clamp-2 ${t.is_completed ? "line-through opacity-50" : ""}`}>{t.title}</div>
+                  {/* Meta footer — only when there's vertical room */}
+                  {t._height > 64 && (
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[9px] font-black uppercase tracking-widest mt-auto">
+                      <span className={cls.text}>{cat.label}</span>
+                      {t.energy && <span>{ENERGY_LEVELS.find(e => e.id === t.energy)?.icon}</span>}
+                      {t.jobs && <span className="text-orange-500 normal-case tracking-tight">#{t.jobs.job_number}</span>}
+                      {t.customers && <span className="text-teal-500 normal-case tracking-tight truncate">{t.customers.company_name}</span>}
+                    </div>
                   )}
                 </div>
-                {/* Row 2: title — clamped so a long title doesn't push the
-                    footer out of frame. */}
-                <div className={`text-[11px] font-black tracking-tight leading-tight line-clamp-2 ${t.is_completed ? "line-through opacity-50" : ""}`}>{t.title}</div>
-                {/* Row 3: meta — only when the slot is tall enough to fit
-                    a third row without crowding. */}
-                {t._height > 64 && (
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[9px] font-black uppercase tracking-widest mt-auto">
-                    <span className={cls.text}>{cat.label}</span>
-                    {t.energy && <span>{ENERGY_LEVELS.find(e => e.id === t.energy)?.icon}</span>}
-                    {t.jobs && <span className="text-orange-500 normal-case tracking-tight">#{t.jobs.job_number}</span>}
-                    {t.customers && <span className="text-teal-500 normal-case tracking-tight truncate">{t.customers.company_name}</span>}
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           );
         })}
