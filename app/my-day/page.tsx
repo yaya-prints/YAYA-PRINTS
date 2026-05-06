@@ -614,6 +614,12 @@ export default function MyDayPage() {
   // UI state
   const [captureInput, setCaptureInput] = useState("");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  // Tracks ids of tasks with an in-flight DB write. fetchTasks() consults this
+  // set so refetches (post-insert, realtime, autoPack…) never overwrite a row
+  // whose update is still on the wire — that was the cause of the
+  // "time reverts when I add another job" bug. Stored in a ref so it doesn't
+  // trigger re-renders.
+  const pendingIdsRef = useRef<Set<string>>(new Set());
   const [showReview, setShowReview] = useState(false);
   const [voiceListening, setVoiceListening] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
@@ -704,7 +710,31 @@ export default function MyDayPage() {
 
       if (error) throw error;
       const fetched = (data || []) as Task[];
-      setTasks(fetched);
+
+      // RECONCILE — never wholesale-overwrite local state. Two rules:
+      //   1. Any row whose id is in pendingIdsRef has an in-flight write; trust
+      //      the local optimistic copy until that write resolves, otherwise
+      //      a stale DB read clobbers the user's edit.
+      //   2. Optimistic temp-id rows (recently inserted, real id not yet
+      //      assigned) are preserved until a refetch returns a row that
+      //      replaces them (matched by tempId or the realtime sub).
+      // Without this, "edit time → save → add another job → refetch" would
+      // revert the time edit because the refetch raced the update.
+      setTasks(prev => {
+        const fetchedIds = new Set(fetched.map(t => t.id));
+        const merged: Task[] = fetched.map(f => {
+          if (pendingIdsRef.current.has(f.id)) {
+            const local = prev.find(p => p.id === f.id);
+            return local ?? f;
+          }
+          return f;
+        });
+        const optimisticTemps = prev.filter(p =>
+          typeof p.id === "string" && p.id.startsWith("tmp-") && !fetchedIds.has(p.id)
+        );
+        return [...merged, ...optimisticTemps];
+      });
+
       // Cache for offline
       try {
         const cache = JSON.parse(localStorage.getItem(LS_TASK_CACHE) || "{}");
@@ -859,8 +889,14 @@ export default function MyDayPage() {
 
   // ─── WRITE HELPERS (queue if offline) ─────────────────────────────────────────
   const enqueueOrRun = async (op: WriteOp): Promise<boolean> => {
+    // Mark the target row as pending so any concurrent fetchTasks() doesn't
+    // clobber the local optimistic value with a stale DB read.
+    const pendingId = (op.kind === "update" || op.kind === "delete") ? op.id : null;
+    if (pendingId) pendingIdsRef.current.add(pendingId);
+
     if (!navigator.onLine) {
       const q = loadQueue(); q.push(op); saveQueue(q); setQueueDepth(q.length);
+      if (pendingId) pendingIdsRef.current.delete(pendingId);
       return false;
     }
     try {
@@ -881,6 +917,8 @@ export default function MyDayPage() {
     } catch {
       const q = loadQueue(); q.push(op); saveQueue(q); setQueueDepth(q.length);
       return false;
+    } finally {
+      if (pendingId) pendingIdsRef.current.delete(pendingId);
     }
   };
 
