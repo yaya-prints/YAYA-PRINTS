@@ -1821,7 +1821,8 @@ function Timeline({ view, tasks, onToggle, onEdit, isToday, draggingJob, draggin
 
   const gridRef = useRef<HTMLDivElement>(null);
 
-  // Convert pointer Y → snapped time string ("HH:MM:SS"), 15-min increments
+  // Convert pointer Y → time string ("HH:MM:SS"), snapped to 30-min slots
+  // (so the cursor locks to :00 / :30 only, never :15 / :45).
   const yToSnappedTime = (clientY: number): string | null => {
     const grid = gridRef.current;
     if (!grid) return null;
@@ -1830,9 +1831,40 @@ function Timeline({ view, tasks, onToggle, onEdit, isToday, draggingJob, draggin
     const totalMinutes = (y / PIXELS_PER_HOUR) * 60;
     const startMins = TIMELINE_START_HOUR * 60;
     const absMins = startMins + totalMinutes;
-    const snapped = Math.round(absMins / 15) * 15;
-    const clampedMin = Math.min(Math.max(snapped, startMins), (TIMELINE_END_HOUR + 1) * 60 - 15);
+    const snapped = Math.round(absMins / 30) * 30;
+    const clampedMin = Math.min(Math.max(snapped, startMins), (TIMELINE_END_HOUR + 1) * 60 - 30);
     return timeFromMins(clampedMin);
+  };
+
+  // Magnetic snap: if the cursor lands inside an existing task's slot,
+  // shift the dragged card to either *before* or *after* that task
+  // (depending on which half of it the cursor is in). Gives the
+  // "auto-tucks under the card above" feel the user asked for.
+  const magneticSnap = (rawTime: string, currentDragId: string | null, draggedDuration: number): string => {
+    const targetMins = minsFromTime(rawTime);
+    const dur = Math.max(15, draggedDuration);
+    for (const p of positioned) {
+      if (p.id === currentDragId) continue;
+      const pStart = minsFromTime(p.target_time);
+      const pEnd = pStart + (p.duration_minutes || 30);
+      // Hovering over this task block?
+      if (targetMins >= pStart - 5 && targetMins < pEnd + 5) {
+        const half = pStart + (pEnd - pStart) / 2;
+        let newStart;
+        if (targetMins < half) {
+          // Snap *above* — top edge of dragged sits at (pStart - draggedDuration)
+          newStart = pStart - dur;
+        } else {
+          // Snap *below* — top edge of dragged sits at pEnd
+          newStart = pEnd;
+        }
+        const startBound = TIMELINE_START_HOUR * 60;
+        const endBound = (TIMELINE_END_HOUR + 1) * 60 - dur;
+        const clamped = Math.min(Math.max(newStart, startBound), endBound);
+        return timeFromMins(Math.round(clamped / 30) * 30);
+      }
+    }
+    return rawTime;
   };
 
   // Current-time marker
@@ -1890,8 +1922,12 @@ function Timeline({ view, tasks, onToggle, onEdit, isToday, draggingJob, draggin
       onDragOver={(e) => {
         if (!draggingJob && !draggingTaskId) return;
         e.preventDefault();
-        const t = yToSnappedTime(e.clientY);
-        if (t) setDropHint?.({ kind: "time", time: t });
+        const raw = yToSnappedTime(e.clientY);
+        if (!raw) return;
+        const draggedTask = draggingTaskId ? tasks.find(x => x.id === draggingTaskId) : null;
+        const draggedDur = draggedTask?.duration_minutes ?? 60;
+        const t = magneticSnap(raw, draggingTaskId ?? null, draggedDur);
+        setDropHint?.({ kind: "time", time: t });
       }}
       onDragLeave={(e) => {
         if (!draggingJob && !draggingTaskId) return;
@@ -1903,8 +1939,11 @@ function Timeline({ view, tasks, onToggle, onEdit, isToday, draggingJob, draggin
       }}
       onDrop={(e) => {
         e.preventDefault();
-        const t = yToSnappedTime(e.clientY);
-        if (!t) return;
+        const raw = yToSnappedTime(e.clientY);
+        if (!raw) return;
+        const draggedTask = draggingTaskId ? tasks.find(x => x.id === draggingTaskId) : null;
+        const draggedDur = draggedTask?.duration_minutes ?? 60;
+        const t = magneticSnap(raw, draggingTaskId ?? null, draggedDur);
         // A job from the picker takes precedence; otherwise this is an
         // existing task being repositioned to a new time.
         if (draggingJob) {
@@ -1971,20 +2010,23 @@ function Timeline({ view, tasks, onToggle, onEdit, isToday, draggingJob, draggin
             else actualBadge = { text: "on time", color: "text-emerald-400" };
           }
           const isDragging = draggingTaskId === t.id;
+          // Don't transition the card the user is dragging — only siblings
+          // animate as they make room for the move. Gives the silk-smooth
+          // "auto-tucks under the card above" behaviour.
+          const transitionCls = isDragging ? "" : "transition-[top,left,width,height] duration-200 ease-out";
           return (
             <div key={t.id}
               draggable={!t.is_completed}
               onDragStart={(e) => {
                 if (t.is_completed) return;
                 setDraggingTaskId?.(t.id);
-                // dataTransfer makes the drag image render correctly on Safari
                 try { e.dataTransfer.setData("text/plain", t.id); e.dataTransfer.effectAllowed = "move"; } catch {}
               }}
               onDragEnd={() => { setDraggingTaskId?.(null); setDropHint?.(null); }}
               onClick={() => onEdit(t)}
               className={`absolute rounded-lg ${cls.bg} ${
                 t._conflict ? "ring-2 ring-red-500/70" : `ring-1 ${cls.ring}`
-              } cursor-grab active:cursor-grabbing hover:scale-[1.01] transition-all overflow-hidden ${isDragging ? "opacity-40" : ""}`}
+              } cursor-grab active:cursor-grabbing hover:scale-[1.01] hover:shadow-md ${transitionCls} overflow-hidden ${isDragging ? "opacity-40 scale-[0.98]" : ""}`}
               style={{ top: t._top, height: t._height, left: `calc(${leftPct}% + 4px)`, width: `calc(${widthPct}% - 8px)` }}>
               <div className={`absolute left-0 top-0 bottom-0 w-1 ${cls.chip}`}></div>
               {t._conflict && (
@@ -1992,36 +2034,41 @@ function Timeline({ view, tasks, onToggle, onEdit, isToday, draggingJob, draggin
                   ⚠ Overlap
                 </div>
               )}
-              <div className="p-2 pl-3 h-full flex flex-col">
-                <div className="flex items-start gap-2">
+              <div className="px-2 pl-3 py-1.5 h-full flex flex-col gap-0.5">
+                {/* Row 1: checkbox + time chip + duration — always visible.
+                    Even on the minimum 28px slot, this row fits since we
+                    pinned title to the next line. */}
+                <div className="flex items-center gap-1.5">
                   <button onClick={(e) => { e.stopPropagation(); onToggle(t); }}
-                    className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center shrink-0 mt-0.5 ${
+                    className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center shrink-0 ${
                       t.is_completed ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-400 hover:border-emerald-400"
                     }`}>
                     {t.is_completed && <span className="text-[8px] leading-none">✓</span>}
                   </button>
-                  <div className="flex-1 min-w-0">
-                    <div className={`text-[11px] font-black tracking-tight leading-tight ${t.is_completed ? "line-through opacity-50" : ""}`}>{t.title}</div>
-                    <div className="flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mt-0.5 flex-wrap">
-                      <span>{fmt12hr(t.target_time)} · {t.duration_minutes}m</span>
-                      {itemProgress && (
-                        <span className="text-amber-400">☑ {itemProgress.done}/{itemProgress.total}</span>
-                      )}
-                      {actualBadge && (
-                        <span className={actualBadge.color}>{actualBadge.text}</span>
-                      )}
-                      {t.started_at && !t.is_completed && (
-                        <span className="text-sky-400 animate-pulse">● running</span>
-                      )}
-                    </div>
-                  </div>
+                  <span className={`text-[10px] font-black font-mono tracking-tight ${cls.text}`}>{fmt12hr(t.target_time)}</span>
+                  <span className="text-[9px] font-bold opacity-50">·</span>
+                  <span className="text-[9px] font-bold uppercase tracking-widest opacity-60">{t.duration_minutes}m</span>
+                  {itemProgress && (
+                    <span className="text-[9px] font-black text-amber-500 ml-auto">☑ {itemProgress.done}/{itemProgress.total}</span>
+                  )}
+                  {actualBadge && !itemProgress && (
+                    <span className={`text-[9px] font-black uppercase tracking-widest ml-auto ${actualBadge.color}`}>{actualBadge.text}</span>
+                  )}
+                  {t.started_at && !t.is_completed && (
+                    <span className="text-[9px] font-black text-sky-500 animate-pulse ml-auto">● live</span>
+                  )}
                 </div>
-                {t._height > 60 && (
-                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[8px] font-black uppercase tracking-widest">
+                {/* Row 2: title — clamped so a long title doesn't push the
+                    footer out of frame. */}
+                <div className={`text-[11px] font-black tracking-tight leading-tight line-clamp-2 ${t.is_completed ? "line-through opacity-50" : ""}`}>{t.title}</div>
+                {/* Row 3: meta — only when the slot is tall enough to fit
+                    a third row without crowding. */}
+                {t._height > 64 && (
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[9px] font-black uppercase tracking-widest mt-auto">
                     <span className={cls.text}>{cat.label}</span>
                     {t.energy && <span>{ENERGY_LEVELS.find(e => e.id === t.energy)?.icon}</span>}
-                    {t.jobs && <span className="text-orange-400 normal-case tracking-tight">#{t.jobs.job_number}</span>}
-                    {t.customers && <span className="text-teal-400 normal-case tracking-tight truncate">{t.customers.company_name}</span>}
+                    {t.jobs && <span className="text-orange-500 normal-case tracking-tight">#{t.jobs.job_number}</span>}
+                    {t.customers && <span className="text-teal-500 normal-case tracking-tight truncate">{t.customers.company_name}</span>}
                   </div>
                 )}
               </div>
