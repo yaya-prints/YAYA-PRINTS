@@ -2344,6 +2344,67 @@ function JobPicker({ jobs, filter, setFilter, search, setSearch, onClose, onClic
     return stageOrder.filter(s => groups[s]?.length).map(s => ({ stage: s, jobs: groups[s] }));
   }, [filtered]);
 
+  // ─── KEYBOARD NAV ─────────────────────────────────────────────────────────
+  // Flatten the grouped list so arrow keys can walk across stage boundaries.
+  // Keep stageOrder identical to `grouped` above so visual + index match.
+  const flatJobs = useMemo(() => grouped.flatMap(g => g.jobs), [grouped]);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+
+  // Default highlight to first job; reset when the visible list changes.
+  useEffect(() => {
+    if (flatJobs.length === 0) { setHighlightedId(null); return; }
+    if (!highlightedId || !flatJobs.find(j => j.id === highlightedId)) {
+      setHighlightedId(flatJobs[0].id);
+    }
+  }, [flatJobs, highlightedId]);
+
+  // Refs per job so we can scroll the highlighted one into view.
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Document-level key handler so the search input doesn't swallow arrow keys.
+  // (Browsers don't move the cursor on ↑/↓ inside a single-line input, so
+  //  we can safely take over those keys without breaking text editing.)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      // Don't interfere if focus is in a textarea / contenteditable
+      const tgt = e.target as HTMLElement | null;
+      if (tgt && (tgt.tagName === "TEXTAREA" || tgt.isContentEditable)) return;
+
+      if (e.key === "Escape") { e.preventDefault(); onClose(); return; }
+
+      if (flatJobs.length === 0) return;
+
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        const idx = highlightedId ? flatJobs.findIndex(j => j.id === highlightedId) : -1;
+        const dir = e.key === "ArrowDown" ? 1 : -1;
+        const next = Math.max(0, Math.min(flatJobs.length - 1, (idx < 0 ? 0 : idx) + dir));
+        setHighlightedId(flatJobs[next].id);
+        return;
+      }
+      if (e.key === "Enter" && highlightedId) {
+        const job = flatJobs.find(j => j.id === highlightedId);
+        if (job) { e.preventDefault(); onClickJob(job); }
+        return;
+      }
+      // Cmd/Ctrl + 1/2/3 swaps the filter tabs
+      if ((e.metaKey || e.ctrlKey) && (e.key === "1" || e.key === "2" || e.key === "3")) {
+        e.preventDefault();
+        const map: Record<string, "next" | "all" | "due"> = { "1": "next", "2": "all", "3": "due" };
+        setFilter(map[e.key]);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [flatJobs, highlightedId, onClickJob, onClose, setFilter]);
+
+  // Scroll the highlighted card into view when it changes.
+  useEffect(() => {
+    if (!highlightedId) return;
+    const el = cardRefs.current.get(highlightedId);
+    if (el) el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [highlightedId]);
+
   return (
     <div className="fixed inset-0 z-40 flex" onClick={onClose}>
       {/* Backdrop */}
@@ -2388,6 +2449,7 @@ function JobPicker({ jobs, filter, setFilter, search, setSearch, onClose, onClic
 
           {/* Search */}
           <input
+            autoFocus
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by customer, job#, stage…"
@@ -2413,7 +2475,17 @@ function JobPicker({ jobs, filter, setFilter, search, setSearch, onClose, onClic
                 </div>
                 <div className="space-y-2">
                   {stageJobs.map((job: any) => (
-                    <JobPickerCard key={job.id} job={job} onClick={() => onClickJob(job)} onDragStart={() => onDragStart(job)} onDragEnd={onDragEnd} />
+                    <div
+                      key={job.id}
+                      ref={(el) => {
+                        if (el) cardRefs.current.set(job.id, el);
+                        else cardRefs.current.delete(job.id);
+                      }}
+                      className={`rounded-xl transition-all ${highlightedId === job.id ? "ring-2 ring-sky-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-950" : ""}`}
+                      onMouseEnter={() => setHighlightedId(job.id)}
+                    >
+                      <JobPickerCard job={job} onClick={() => onClickJob(job)} onDragStart={() => onDragStart(job)} onDragEnd={onDragEnd} />
+                    </div>
                   ))}
                 </div>
               </div>
@@ -2423,8 +2495,23 @@ function JobPicker({ jobs, filter, setFilter, search, setSearch, onClose, onClic
 
         {/* Footer hint */}
         <div className="border-t border-slate-200 dark:border-slate-800 p-3 bg-slate-50 dark:bg-slate-900/50 text-center">
-          <div className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400">
-            ⊕ Drag a card onto the timeline · or click for details
+          <div className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center justify-center gap-3 flex-wrap">
+            <span className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[8px] font-mono">↑↓</kbd>
+              Navigate
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[8px] font-mono">↵</kbd>
+              Schedule
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[8px] font-mono">⌘1/2/3</kbd>
+              Filter
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[8px] font-mono">esc</kbd>
+              Close
+            </span>
           </div>
         </div>
       </div>
