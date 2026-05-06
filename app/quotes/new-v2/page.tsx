@@ -29,12 +29,52 @@ type DeliveryMethod = "pickup" | "delivery" | "shipping";
 type OrderType = "Custom Apparel" | "Promotional" | "Embroidery Only" | "DTF Transfers" | "Other";
 type PaymentStatus = "Deposit Required" | "Paid in Full" | "Net 15" | "Net 30";
 
+type CatalogItem = {
+  id: string;
+  name: string;
+  category?: string | null;
+  default_price?: number | null;
+};
+
+// One row in the garment table = one product+color combo with size breakdown.
+// On save (Phase 6) rows with the same `description` are grouped into one
+// quote_item with multiple variants; the flat shape here keeps the UI simple.
+type LineItem = {
+  id: string;
+  description: string;
+  color: string;
+  xs: number; s: number; m: number; l: number; xl: number;
+  xxl: number; xxxl: number; xxxxl: number; xxxxxl: number;
+  unit_price: number;
+  regular_price: number;
+};
+
 type ThemeTokens = {
   pageBg: string; text: string; textMuted: string;
   cardBg: string; cardBorder: string; cardShadow: string;
   inputBg: string; primaryBtn: string; secondaryBtn: string;
   hintBg: string;
 };
+
+// ---- CONSTANTS --------------------------------------------------------------
+const GILDAN_COLORS = ["White", "Black", "Navy", "Sport Grey", "Red", "Royal", "Dark Heather", "Charcoal", "Forest Green", "Gold", "Maroon", "Safety Pink", "Safety Orange"];
+const SIZE_KEYS = ["xs", "s", "m", "l", "xl", "xxl", "xxxl", "xxxxl", "xxxxxl"] as const;
+const SIZE_LABELS: Record<(typeof SIZE_KEYS)[number], string> = {
+  xs: "XS", s: "S", m: "M", l: "L", xl: "XL", xxl: "2X", xxxl: "3X", xxxxl: "4X", xxxxxl: "5X",
+};
+type SizeKey = (typeof SIZE_KEYS)[number];
+
+const newLine = (price = 0): LineItem => ({
+  id: Math.random().toString(36).slice(2, 11),
+  description: "",
+  color: "Black",
+  xs: 0, s: 0, m: 0, l: 0, xl: 0, xxl: 0, xxxl: 0, xxxxl: 0, xxxxxl: 0,
+  unit_price: price,
+  regular_price: price,
+});
+
+const lineQty   = (l: LineItem) => l.xs + l.s + l.m + l.l + l.xl + l.xxl + l.xxxl + l.xxxxl + l.xxxxxl;
+const lineTotal = (l: LineItem) => lineQty(l) * (l.unit_price || 0);
 
 // ---- COMPONENT --------------------------------------------------------------
 export default function CreateNewOrderV2() {
@@ -79,6 +119,11 @@ export default function CreateNewOrderV2() {
   const [depositPercent, setDepositPercent] = useState(30);
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("shipping");
 
+  // ---- GARMENT / PRODUCT STATE ---------------------------------------------
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  const [lines, setLines] = useState<LineItem[]>([newLine()]);
+  const [productSearchOpen, setProductSearchOpen] = useState<string | null>(null); // line id whose dropdown is open
+
   // ---- DERIVED VALUES (right sidebar) --------------------------------------
   const selectedCustomer = useMemo(
     () => customers.find(c => c.id === selectedCustomerId) ?? null,
@@ -92,14 +137,15 @@ export default function CreateNewOrderV2() {
     return Math.round((d.getTime() - now.getTime()) / 86400000);
   }, [dueDate]);
 
-  // ---- LOAD CUSTOMERS -------------------------------------------------------
+  // ---- LOAD CUSTOMERS + CATALOG --------------------------------------------
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("customers")
-        .select("id, company_name, contact_name, email, phone, vip_tier, address")
-        .order("company_name");
-      if (data) setCustomers(data as Customer[]);
+      const [{ data: cust }, { data: cat }] = await Promise.all([
+        supabase.from("customers").select("id, company_name, contact_name, email, phone, vip_tier, address").order("company_name"),
+        supabase.from("catalog_items").select("id, name, category, default_price").order("name"),
+      ]);
+      if (cust) setCustomers(cust as Customer[]);
+      if (cat) setCatalog(cat as CatalogItem[]);
     })();
   }, []);
 
@@ -120,6 +166,18 @@ export default function CreateNewOrderV2() {
       .filter(c => c.company_name?.toLowerCase().includes(q) || c.contact_name?.toLowerCase().includes(q))
       .slice(0, 12);
   }, [customers, customerSearch]);
+
+  // ---- LINE-ITEM HELPERS ---------------------------------------------------
+  const addLine = (preset?: Partial<LineItem>) => setLines(ls => [...ls, { ...newLine(), ...preset }]);
+  const removeLine = (id: string) => setLines(ls => ls.length === 1 ? [newLine()] : ls.filter(l => l.id !== id));
+  const updateLine = (id: string, patch: Partial<LineItem>) =>
+    setLines(ls => ls.map(l => l.id === id ? { ...l, ...patch } : l));
+
+  const totalUnits = useMemo(() => lines.reduce((sum, l) => sum + lineQty(l), 0), [lines]);
+  const subtotal   = useMemo(() => lines.reduce((sum, l) => sum + lineTotal(l), 0), [lines]);
+  const productSearchTerms = useMemo(() => catalog.filter(c =>
+    !c.category || (c.category !== "Print Media" && c.category !== "Misc" && c.category !== "Services" && c.category !== "Design" && c.category !== "Custom Insert" && c.category !== "Upsells")
+  ), [catalog]);
 
   // ---- THEME TOKENS ---------------------------------------------------------
   const t: ThemeTokens = {
@@ -183,8 +241,8 @@ export default function CreateNewOrderV2() {
         {/* ─── MAIN: 12-col dense grid ─────────────────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-3 sm:gap-4 min-w-0 auto-rows-min">
 
-          {/* SECTION 1 — Customer Information (xl: 5 of 12) ----------------- */}
-          <SectionCard t={t} num={1} title="Customer Information" className="md:col-span-2 xl:col-span-5">
+          {/* SECTION 1 — Customer Information (xl: 4 of 12) ----------------- */}
+          <SectionCard t={t} num={1} title="Customer Information" className="md:col-span-2 xl:col-span-4">
             <div className="flex flex-col gap-3">
 
               {/* Customer search */}
@@ -392,8 +450,146 @@ export default function CreateNewOrderV2() {
             </div>
           </SectionCard>
 
-          {/* SECTION 3 — Garment / Product (xl: 4 of 12) — Phase 2 ---------- */}
-          <SectionCard t={t} num={3} title="Garment / Product Selection" hint="Phase 2" className="md:col-span-1 xl:col-span-4" placeholder="Product matrix coming next" />
+          {/* SECTION 3 — Garment / Product Selection (xl: 5 of 12) ---------- */}
+          <SectionCard t={t} num={3} title="Garment / Product Selection" className="md:col-span-2 xl:col-span-5">
+            <div className="flex flex-col gap-2.5">
+
+              {/* Lines */}
+              <div className="flex flex-col gap-2">
+                {lines.map((line) => {
+                  const qty = lineQty(line);
+                  const total = lineTotal(line);
+                  const matches = !line.description ? [] : productSearchTerms.filter(p =>
+                    p.name.toLowerCase().includes(line.description.toLowerCase())
+                  ).slice(0, 8);
+                  const dropdownOpen = productSearchOpen === line.id && matches.length > 0;
+
+                  return (
+                    <div key={line.id} className={`rounded-lg border ${isLight ? "bg-slate-50/50 border-slate-200" : "bg-white/[0.02] border-white/5"} p-2.5 flex flex-col gap-2`}>
+
+                      {/* Top row: product + color + total + delete */}
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-1 min-w-0">
+                          <input
+                            type="text"
+                            value={line.description}
+                            placeholder="Product / style…"
+                            onChange={(e) => updateLine(line.id, { description: e.target.value })}
+                            onFocus={() => setProductSearchOpen(line.id)}
+                            onBlur={() => setTimeout(() => setProductSearchOpen(prev => prev === line.id ? null : prev), 150)}
+                            className={inputSm}
+                          />
+                          {dropdownOpen && (
+                            <div className={`absolute top-full left-0 right-0 mt-1 ${t.cardBg} ${t.cardBorder} border rounded-md shadow-2xl overflow-hidden z-20 max-h-52 overflow-y-auto`}>
+                              {matches.map(p => (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => {
+                                    updateLine(line.id, {
+                                      description: p.name,
+                                      unit_price: p.default_price ?? 0,
+                                      regular_price: p.default_price ?? 0,
+                                    });
+                                    setProductSearchOpen(null);
+                                  }}
+                                  className={`w-full text-left px-2.5 py-1.5 hover:bg-sky-500/10 transition-colors flex items-center justify-between gap-2 ${t.cardBorder} border-b last:border-b-0`}
+                                >
+                                  <span className={`text-[12px] font-bold truncate ${t.text}`}>{p.name}</span>
+                                  {p.default_price != null && <span className={`text-[10px] font-mono ${t.textMuted} shrink-0`}>${p.default_price}</span>}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <select
+                          value={line.color}
+                          onChange={(e) => updateLine(line.id, { color: e.target.value })}
+                          className={inputSm + " w-24 shrink-0 cursor-pointer"}
+                        >
+                          {GILDAN_COLORS.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+
+                        <div className={`flex flex-col items-end shrink-0 ${qty > 0 ? "" : "opacity-40"}`}>
+                          <span className={`text-[9px] font-black uppercase tracking-widest ${t.textMuted} leading-none`}>{qty} units</span>
+                          <span className={`text-[12px] font-black font-mono ${t.text} leading-tight`}>${total.toFixed(2)}</span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => removeLine(line.id)}
+                          className={`shrink-0 w-7 h-7 rounded-md flex items-center justify-center text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all`}
+                          aria-label="Remove line"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+                        </button>
+                      </div>
+
+                      {/* Sizes row + unit price */}
+                      <div className="flex items-end gap-2 overflow-x-auto no-scrollbar">
+                        {SIZE_KEYS.map(sz => (
+                          <div key={sz} className="flex flex-col items-center shrink-0">
+                            <span className={`text-[9px] font-black uppercase tracking-widest ${t.textMuted} leading-none mb-0.5`}>{SIZE_LABELS[sz]}</span>
+                            <input
+                              type="number"
+                              min={0}
+                              value={line[sz] || ""}
+                              onChange={(e) => updateLine(line.id, { [sz]: parseInt(e.target.value) || 0 } as Partial<LineItem>)}
+                              placeholder="0"
+                              className={`w-9 text-center px-1 py-1 rounded text-[12px] font-bold font-mono outline-none border focus:border-sky-500 ${line[sz] > 0 ? (isLight ? "bg-white border-sky-300 text-sky-700" : "bg-sky-500/10 border-sky-500/40 text-sky-300") : (isLight ? "bg-white border-slate-200 text-slate-400" : "bg-[#0d0e13] border-white/10 text-slate-600")}`}
+                            />
+                          </div>
+                        ))}
+                        <div className="flex-1" />
+                        <div className="flex flex-col items-end shrink-0 ml-1">
+                          <span className={`text-[9px] font-black uppercase tracking-widest ${t.textMuted} leading-none mb-0.5`}>$/unit</span>
+                          <input
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            value={line.unit_price || ""}
+                            onChange={(e) => updateLine(line.id, { unit_price: parseFloat(e.target.value) || 0 })}
+                            placeholder="0.00"
+                            className={inputSm + " w-20 text-right font-mono"}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Add buttons */}
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => addLine()}
+                  className={`px-3 py-2 rounded-md border border-dashed text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 ${isLight ? "border-slate-300 text-slate-600 hover:border-sky-500 hover:text-sky-500" : "border-white/15 text-slate-400 hover:border-sky-500 hover:text-sky-400"}`}
+                >
+                  + Add Product
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const last = lines[lines.length - 1];
+                    addLine({ description: last.description, unit_price: last.unit_price, regular_price: last.regular_price, color: last.color === "Black" ? "White" : "Black" });
+                  }}
+                  className={`px-3 py-2 rounded-md text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 ${isLight ? "text-slate-500 hover:text-sky-500" : "text-slate-400 hover:text-sky-400"}`}
+                  title="Add another color of the same product"
+                >
+                  + Color of last
+                </button>
+
+                <div className="flex-1" />
+
+                <div className={`text-[10px] font-black uppercase tracking-widest ${t.textMuted}`}>
+                  {lines.filter(l => l.description.trim()).length} items · <span className={totalUnits > 0 ? t.text : ""}>{totalUnits} units</span>
+                </div>
+              </div>
+            </div>
+          </SectionCard>
 
           {/* SECTION 4 — Print Specifications (xl: 4 of 12) — Phase 3 ------- */}
           <SectionCard t={t} num={4} title="Print Specifications" hint="Phase 3" className="md:col-span-1 xl:col-span-4" placeholder="DTF / Screen / Embroidery / Vinyl + locations + colors" />
@@ -431,7 +627,8 @@ export default function CreateNewOrderV2() {
                 value={dueDate ? new Date(dueDate + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—"}
                 suffix={dueInDays !== null ? <span className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${dueInDays < 0 ? "bg-rose-500/15 text-rose-500" : dueInDays <= 7 ? "bg-amber-500/15 text-amber-500" : "bg-emerald-500/15 text-emerald-500"}`}>{dueInDays < 0 ? `${Math.abs(dueInDays)}d late` : `${dueInDays}d left`}</span> : null}
               />
-              <Row label="Total Units" value="0" muted="(Phase 2)" />
+              <Row label="Total Units" value={totalUnits.toString()} highlight={totalUnits > 0} />
+              <Row label="Subtotal" value={`$${subtotal.toFixed(2)}`} mono highlight={subtotal > 0} />
               <Row label="Order Type" value={orderType} />
               <Row label="Payment" value={paymentStatus} suffix={paymentStatus === "Deposit Required" ? <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-500">{depositPercent}%</span> : null} />
               <Row label="Sales Rep" value={salesRep} />
