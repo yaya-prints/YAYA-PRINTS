@@ -49,7 +49,7 @@ type LineItem = {
   regular_price: number;
 };
 
-type PrintMethod = "DTF" | "Screen Print" | "Embroidery" | "Vinyl" | "Heat Press";
+type PrintMethod = "DTF" | "Screen Printing" | "Embroidery";
 type PrintLocation = "Left Chest" | "Full Front" | "Full Back" | "Left Sleeve" | "Right Sleeve" | "Back Yoke";
 type ArtworkStatus = "print-ready" | "awaiting-approval";
 
@@ -64,7 +64,7 @@ type AttachedFile = {
   status: ArtworkStatus;
 };
 
-const PRINT_METHODS: PrintMethod[] = ["DTF", "Screen Print", "Embroidery", "Vinyl", "Heat Press"];
+const PRINT_METHODS: PrintMethod[] = ["DTF", "Screen Printing", "Embroidery"];
 const PRINT_LOCATIONS: PrintLocation[] = ["Left Chest", "Full Front", "Full Back", "Left Sleeve", "Right Sleeve", "Back Yoke"];
 
 const formatFileSize = (bytes: number): string => {
@@ -81,10 +81,11 @@ type ThemeTokens = {
 };
 
 // ---- CONSTANTS --------------------------------------------------------------
-// Color palette + hex map mirrored from /app/mockup-v2/page.tsx so this page
-// shows real garment colours with accurate swatches. If the mockup page adds
-// or renames a colour, update both.
-const ALL_COLORS = [
+// Color palettes mirrored from /app/mockup-v2/page.tsx — each garment type
+// has its own list because Gildan stocks different colors per product.
+// If a product description doesn't match a known type, we fall back to the
+// full t-shirt palette (broadest set).
+const TSHIRT_COLORS = [
   "White", "Black", "Charcoal", "Dark Heather", "Sport Grey", "Navy",
   "Off White", "Ice Grey", "Paragon", "Graphite Heather", "Heather Dark Grey",
   "Natural", "Cornsilk", "Sand", "Dark Chocolate",
@@ -102,6 +103,35 @@ const ALL_COLORS = [
   "Heather Dark Green", "Military Green", "Heather Military Green", "Safety Green",
   "Ash",
 ];
+const HOODIE_COLORS = [
+  "White", "Black", "Charcoal", "Dark Heather", "Sport Grey", "Navy",
+  "Ash", "Graphite Heather", "Sand", "Dark Chocolate",
+  "Gold", "Old Gold", "Orange", "Safety Orange",
+  "Light Pink", "Safety Pink", "Azalea", "Heliconia", "Cherry Red", "Antique Cherry Red", "Red", "Heather Scarlet Red", "Cardinal Red", "Garnet", "Maroon", "Heather Dark Maroon",
+  "Orchid", "Violet", "Purple",
+  "Light Blue", "Carolina Blue", "Sapphire", "Antique Sapphire", "Royal", "Heather Deep Royal", "Indigo Blue", "Heather Dark Navy",
+  "Mint Green", "Irish Green", "Forest", "Heather Dark Green", "Military Green", "Safety Green",
+];
+const HAT_COLORS = [
+  "White","Black","Charcoal","Khaki","Navy","Red",
+];
+const POLO_COLORS = [
+  "White", "Black", "Ash", "Carolina Blue", "Dark Heather", "Forest Green",
+  "Gold", "Graphite Heather", "Kelly Green", "Maroon", "Navy", "Purple",
+  "Red", "Royal", "Sapphire", "Sport Grey",
+];
+// Used by ColorPicker as the union for hex lookup; specific palettes filter
+// by product type at runtime.
+const ALL_COLORS = TSHIRT_COLORS;
+
+// Pick the right palette based on what the line description looks like.
+function colorsForProduct(desc: string): string[] {
+  const d = (desc || "").toLowerCase();
+  if (/hood|18500|crew\s*neck|sweater|sweatshirt|fleece|18000|sf500|sf000/.test(d)) return HOODIE_COLORS;
+  if (/polo|8800/.test(d))                                                            return POLO_COLORS;
+  if (/hat|cap|beanie|6506|trucker|snapback/.test(d))                                 return HAT_COLORS;
+  return TSHIRT_COLORS; // fallback — covers tees, longsleeves, tanks, anything else
+}
 const COLOR_HEX: Record<string, string> = {
   "Antique Cherry Red":"#7C1C29","Antique Heliconia":"#D14578","Antique Sapphire":"#126B88","Ash":"#D7D7D7",
   "Azalea":"#F089B2","Black":"#111111","Cardinal Red":"#8A1529","Carolina Blue":"#7BAFD4","Charcoal":"#4F5254",
@@ -200,7 +230,8 @@ export default function CreateNewOrderV2() {
   const [setupFees, setSetupFees] = useState(0);
   const [addOnCharges, setAddOnCharges] = useState(0);
   const [shippingFee, setShippingFee] = useState(0);
-  const [taxRate, setTaxRate] = useState(8.25); // percent
+  // Tax (HST 13%) intentionally NOT collected here — it's auto-applied on
+  // the quote/invoice view so this page stays focused on order entry.
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [packagingNotes, setPackagingNotes] = useState("");
   const [qcNotes, setQcNotes] = useState("");
@@ -331,12 +362,12 @@ export default function CreateNewOrderV2() {
   const subtotal   = useMemo(() => lines.reduce((sum, l) => sum + lineTotal(l), 0), [lines]);
 
   // Pricing breakdown — order of ops mirrors the screenshot:
-  // Subtotal + Setup + AddOns => preTax.  Rush is +15% on preTax (if on).
-  // Tax applies to (preTax + rush).  Shipping is added after tax.
+  // Subtotal + Setup + AddOns => preTax.  Rush is +15% on (preTax) if on.
+  // We deliberately don't add tax here — HST is auto-applied on the
+  // quote/invoice detail view so the user sees a single source of truth.
   const rushFee     = useMemo(() => rushOrder ? (subtotal + setupFees + addOnCharges) * 0.15 : 0, [rushOrder, subtotal, setupFees, addOnCharges]);
   const preTaxTotal = useMemo(() => subtotal + setupFees + addOnCharges + rushFee, [subtotal, setupFees, addOnCharges, rushFee]);
-  const taxAmount   = useMemo(() => preTaxTotal * (taxRate / 100), [preTaxTotal, taxRate]);
-  const grandTotal  = useMemo(() => preTaxTotal + taxAmount + shippingFee, [preTaxTotal, taxAmount, shippingFee]);
+  const grandTotal  = useMemo(() => preTaxTotal + shippingFee, [preTaxTotal, shippingFee]);
   const depositAmount = useMemo(() => paymentStatus === "Deposit Required" ? grandTotal * (depositPercent / 100) : 0, [grandTotal, depositPercent, paymentStatus]);
 
   // Margin estimate — uses each line's regular_price as MSRP and unit_price
@@ -405,8 +436,8 @@ export default function CreateNewOrderV2() {
     if (addOnCharges > 0) lines.push(`Add-ons: $${addOnCharges.toFixed(2)}`);
     if (rushOrder)        lines.push(`Rush Fee: $${rushFee.toFixed(2)}`);
     if (shippingFee > 0)  lines.push(`Shipping: $${shippingFee.toFixed(2)}`);
-    lines.push(`Tax (${taxRate}%): $${taxAmount.toFixed(2)}`);
-    lines.push(`GRAND TOTAL: $${grandTotal.toFixed(2)}`);
+    lines.push(`SUBTOTAL (pre-tax): $${grandTotal.toFixed(2)}`);
+    lines.push(`HST 13% applied on quote/invoice view.`);
     if (paymentStatus === "Deposit Required") lines.push(`Deposit Owed: $${depositAmount.toFixed(2)}`);
     lines.push("");
     if (specialInstructions) { lines.push("── SPECIAL INSTRUCTIONS ──"); lines.push(specialInstructions); lines.push(""); }
@@ -840,12 +871,32 @@ export default function CreateNewOrderV2() {
 
                       {/* Row 2: Color picker + total + unit price */}
                       <div className="flex items-center gap-2 flex-wrap">
-                        <ColorPicker value={line.color} onChange={(c) => updateLine(line.id, { color: c })} t={t} isLight={isLight} />
+                        <ColorPicker value={line.color} colors={colorsForProduct(line.description)} onChange={(c) => updateLine(line.id, { color: c })} t={t} isLight={isLight} />
 
                         <div className="flex-1" />
 
                         <div className="flex items-center gap-1.5">
-                          <span className={`text-[9px] font-black uppercase tracking-widest ${t.textMuted}`}>$/unit</span>
+                          <span className={`text-[9px] font-black uppercase tracking-widest ${t.textMuted}`}>Reg</span>
+                          <input
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            value={line.regular_price || ""}
+                            onChange={(e) => {
+                              const v = parseFloat(e.target.value) || 0;
+                              // Auto-fill special with regular when special is empty,
+                              // so single-price entries don't need both.
+                              const patch: Partial<LineItem> = { regular_price: v };
+                              if (!line.unit_price) patch.unit_price = v;
+                              updateLine(line.id, patch);
+                            }}
+                            placeholder="0.00"
+                            className={inputSm + " w-20 text-right font-mono"}
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-[9px] font-black uppercase tracking-widest ${line.unit_price > 0 && line.unit_price < line.regular_price ? "text-emerald-500" : t.textMuted}`}>Special</span>
                           <input
                             type="number"
                             min={0}
@@ -853,13 +904,18 @@ export default function CreateNewOrderV2() {
                             value={line.unit_price || ""}
                             onChange={(e) => updateLine(line.id, { unit_price: parseFloat(e.target.value) || 0 })}
                             placeholder="0.00"
-                            className={inputSm + " w-20 text-right font-mono"}
+                            className={inputSm + ` w-20 text-right font-mono ${line.unit_price > 0 && line.unit_price < line.regular_price ? "border-emerald-500/40" : ""}`}
                           />
                         </div>
 
                         <div className={`flex flex-col items-end shrink-0 px-2 ${qty > 0 ? "" : "opacity-40"}`}>
                           <span className={`text-[9px] font-black uppercase tracking-widest ${t.textMuted} leading-none`}>{qty} units</span>
                           <span className={`text-[13px] font-black font-mono leading-tight ${qty > 0 ? "text-emerald-500" : t.text}`}>${total.toFixed(2)}</span>
+                          {qty > 0 && line.unit_price > 0 && line.unit_price < line.regular_price && (
+                            <span className="text-[9px] font-bold font-mono text-emerald-500/70 leading-none mt-0.5">
+                              save ${((line.regular_price - line.unit_price) * qty).toFixed(2)}
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -1156,27 +1212,16 @@ export default function CreateNewOrderV2() {
                 />
               </div>
 
-              <div className="flex items-center justify-between gap-2">
-                <span className={`text-[10px] font-black uppercase tracking-widest ${t.textMuted} flex items-center gap-1.5`}>
-                  Tax
-                  <input
-                    type="number" min={0} max={30} step={0.25}
-                    value={taxRate}
-                    onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
-                    className={`w-12 text-center font-mono text-[10px] py-0.5 px-1 rounded border outline-none focus:border-sky-500 ${t.inputBg}`}
-                  />
-                  <span>%</span>
-                </span>
-                <span className={`text-[12px] font-mono font-bold ${t.text}`}>${taxAmount.toFixed(2)}</span>
-              </div>
-
               {paymentStatus === "Deposit Required" && (
                 <PriceRow t={t} label={`Deposit (${depositPercent}%)`} value={-depositAmount} mono accent="emerald" />
               )}
 
-              {/* Grand Total */}
+              {/* Subtotal (pre-tax) — HST 13% is applied on the quote/invoice view */}
               <div className={`flex items-center justify-between gap-2 mt-1 pt-2.5 border-t ${t.cardBorder}`}>
-                <span className={`text-[12px] font-black uppercase tracking-widest ${t.text}`}>Grand Total</span>
+                <div className="flex flex-col">
+                  <span className={`text-[12px] font-black uppercase tracking-widest ${t.text}`}>Pre-Tax Total</span>
+                  <span className={`text-[9px] font-bold uppercase tracking-widest ${t.textMuted}`}>HST 13% applied on quote / invoice</span>
+                </div>
                 <span className="text-[20px] font-black font-mono text-sky-500 tracking-tight">${grandTotal.toFixed(2)}</span>
               </div>
 
@@ -1486,16 +1531,19 @@ function Field({
 }
 
 // Color picker — button shows the current swatch + name; clicking opens a
-// grid of every garment colour from the mockup-v2 palette. Defined outside
-// the page component for stable identity (otherwise inputs in the page
-// would lose focus on every render).
-function ColorPicker({ value, onChange, t, isLight }: {
+// grid of garment colours filtered by product type, plus a free-text input
+// at the bottom so the user can type any custom colour name. Defined
+// outside the page component for stable identity (otherwise inputs in the
+// page would lose focus on every render).
+function ColorPicker({ value, onChange, colors, t, isLight }: {
   value: string;
   onChange: (c: string) => void;
+  colors: string[];
   t: ThemeTokens;
   isLight: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [customInput, setCustomInput] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1515,6 +1563,14 @@ function ColorPicker({ value, onChange, t, isLight }: {
   const hex = colorHex(value);
   const isLightSwatch = ["#FFFFFF", "#F8F8FF", "#EBE5D5", "#FFF8DC"].includes(hex);
 
+  const applyCustom = () => {
+    const v = customInput.trim();
+    if (!v) return;
+    onChange(v);
+    setCustomInput("");
+    setOpen(false);
+  };
+
   return (
     <div ref={ref} className="relative">
       <button
@@ -1531,9 +1587,12 @@ function ColorPicker({ value, onChange, t, isLight }: {
       </button>
 
       {open && (
-        <div className={`absolute top-full left-0 mt-1 w-72 ${t.cardBg} ${t.cardBorder} border rounded-md shadow-2xl z-30 p-2 max-h-72 overflow-y-auto`}>
+        <div className={`absolute top-full left-0 mt-1 w-72 ${t.cardBg} ${t.cardBorder} border rounded-md shadow-2xl z-30 p-2 max-h-80 overflow-y-auto`}>
+          <div className={`text-[9px] font-black uppercase tracking-widest ${t.textMuted} mb-1.5 px-1`}>
+            {colors.length} stock colors
+          </div>
           <div className="grid grid-cols-6 gap-1">
-            {ALL_COLORS.map(c => {
+            {colors.map(c => {
               const cHex = colorHex(c);
               const cLight = ["#FFFFFF", "#F8F8FF", "#EBE5D5", "#FFF8DC"].includes(cHex);
               const selected = c === value;
@@ -1549,8 +1608,34 @@ function ColorPicker({ value, onChange, t, isLight }: {
               );
             })}
           </div>
+
+          {/* Manual override — type any colour name */}
+          <div className={`mt-2 pt-2 border-t ${t.cardBorder}`}>
+            <div className={`text-[9px] font-black uppercase tracking-widest ${t.textMuted} mb-1.5 px-1`}>
+              Or type any color
+            </div>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="text"
+                value={customInput}
+                onChange={(e) => setCustomInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyCustom(); } }}
+                placeholder="e.g. Mocha, Sage Mist, Two-tone…"
+                className={`flex-1 rounded-md border px-2.5 py-1.5 text-[12px] font-medium outline-none focus:border-sky-500 ${t.inputBg}`}
+              />
+              <button
+                type="button"
+                onClick={applyCustom}
+                disabled={!customInput.trim()}
+                className="px-3 py-1.5 rounded-md text-[11px] font-black uppercase tracking-widest bg-sky-500 hover:bg-sky-400 text-white shadow-sm active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+
           <div className={`mt-2 pt-2 border-t ${t.cardBorder} text-[10px] font-bold ${t.textMuted} text-center`}>
-            {value}
+            Selected: <span className={t.text}>{value}</span>
           </div>
         </div>
       )}
