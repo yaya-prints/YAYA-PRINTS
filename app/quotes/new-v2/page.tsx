@@ -49,6 +49,30 @@ type LineItem = {
   regular_price: number;
 };
 
+type PrintMethod = "DTF" | "Screen Print" | "Embroidery" | "Vinyl" | "Heat Press";
+type PrintLocation = "Left Chest" | "Full Front" | "Full Back" | "Left Sleeve" | "Right Sleeve" | "Back Yoke";
+type ArtworkStatus = "print-ready" | "awaiting-approval";
+
+type AttachedFile = {
+  id: string;
+  name: string;
+  url: string;          // public URL
+  path: string;         // storage path (used for delete)
+  size: number;         // bytes
+  type: string;         // mime type
+  isImage: boolean;
+  status: ArtworkStatus;
+};
+
+const PRINT_METHODS: PrintMethod[] = ["DTF", "Screen Print", "Embroidery", "Vinyl", "Heat Press"];
+const PRINT_LOCATIONS: PrintLocation[] = ["Left Chest", "Full Front", "Full Back", "Left Sleeve", "Right Sleeve", "Back Yoke"];
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 type ThemeTokens = {
   pageBg: string; text: string; textMuted: string;
   cardBg: string; cardBorder: string; cardShadow: string;
@@ -165,6 +189,68 @@ export default function CreateNewOrderV2() {
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [lines, setLines] = useState<LineItem[]>([newLine()]);
   const [productSearchOpen, setProductSearchOpen] = useState<string | null>(null); // line id whose dropdown is open
+
+  // ---- PRINT SPECS STATE ----------------------------------------------------
+  const [printMethod, setPrintMethod] = useState<PrintMethod>("DTF");
+  const [printLocations, setPrintLocations] = useState<PrintLocation[]>(["Full Front"]);
+  const [numColors, setNumColors] = useState(1);
+  const [printNotes, setPrintNotes] = useState("");
+
+  // ---- ARTWORK FILES STATE -------------------------------------------------
+  // Persisted so we can survive a page refresh during a long order build.
+  // Each file is a session-scoped draft id; on save (Phase 6) the rows get
+  // re-keyed by job id and the files moved/renamed.
+  const [draftId] = useState(() => Math.random().toString(36).slice(2, 11));
+  const [files, setFiles] = useState<AttachedFile[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUpload = async (fileList: FileList | File[] | null) => {
+    if (!fileList) return;
+    const arr = Array.from(fileList);
+    if (arr.length === 0) return;
+    setIsUploading(true);
+    try {
+      for (const f of arr) {
+        const ext = f.name.split(".").pop() || "bin";
+        const path = `draft-${draftId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const { error } = await supabase.storage.from("job-attachments").upload(path, f);
+        if (error) throw error;
+        const { data } = supabase.storage.from("job-attachments").getPublicUrl(path);
+        setFiles(prev => [...prev, {
+          id: Math.random().toString(36).slice(2, 11),
+          name: f.name,
+          url: data.publicUrl,
+          path,
+          size: f.size,
+          type: f.type,
+          isImage: f.type.startsWith("image/"),
+          status: "awaiting-approval",
+        }]);
+      }
+    } catch (err: any) {
+      alert("Upload failed: " + err.message);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeFile = async (file: AttachedFile) => {
+    try {
+      await supabase.storage.from("job-attachments").remove([file.path]);
+    } catch {
+      // Best-effort delete — even if remote remove fails, drop from UI.
+    }
+    setFiles(prev => prev.filter(f => f.id !== file.id));
+  };
+
+  const setFileStatus = (id: string, status: ArtworkStatus) =>
+    setFiles(prev => prev.map(f => f.id === id ? { ...f, status } : f));
+
+  const togglePrintLocation = (loc: PrintLocation) =>
+    setPrintLocations(prev => prev.includes(loc) ? prev.filter(l => l !== loc) : [...prev, loc]);
 
   // ---- DERIVED VALUES (right sidebar) --------------------------------------
   const selectedCustomer = useMemo(
@@ -633,11 +719,206 @@ export default function CreateNewOrderV2() {
             </div>
           </SectionCard>
 
-          {/* SECTION 4 — Print Specifications (xl: 4 of 12) — Phase 3 ------- */}
-          <SectionCard t={t} num={4} title="Print Specifications" hint="Phase 3" className="md:col-span-1 xl:col-span-4" placeholder="DTF / Screen / Embroidery / Vinyl + locations + colors" />
+          {/* SECTION 4 — Print Specifications (xl: 4 of 12) ----------------- */}
+          <SectionCard t={t} num={4} title="Print Specifications" className="md:col-span-1 xl:col-span-4">
+            <div className="flex flex-col gap-3">
 
-          {/* SECTION 5 — Artwork / Files (xl: 4 of 12) — Phase 3 ------------ */}
-          <SectionCard t={t} num={5} title="Artwork / Files" hint="Phase 3" className="md:col-span-1 xl:col-span-4" placeholder="Drag & drop with print-ready / awaiting-approval status" />
+              <Field t={t} label="Print Method" required>
+                <div className="flex flex-wrap gap-1.5">
+                  {PRINT_METHODS.map(m => {
+                    const active = printMethod === m;
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setPrintMethod(m)}
+                        className={`px-3 py-1.5 rounded-md text-[11px] font-black uppercase tracking-widest transition-all border active:scale-95 ${
+                          active
+                            ? "bg-sky-500 text-white border-sky-400 shadow-md"
+                            : isLight
+                              ? "bg-white border-slate-200 text-slate-600 hover:border-slate-400"
+                              : "bg-white/[0.03] border-white/10 text-slate-400 hover:border-white/30 hover:text-slate-200"
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    );
+                  })}
+                </div>
+              </Field>
+
+              <Field t={t} label={`Print Locations (${printLocations.length})`}>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {PRINT_LOCATIONS.map(loc => {
+                    const active = printLocations.includes(loc);
+                    return (
+                      <button
+                        key={loc}
+                        type="button"
+                        onClick={() => togglePrintLocation(loc)}
+                        className={`px-2.5 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-1.5 active:scale-95 ${
+                          active
+                            ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-500"
+                            : isLight
+                              ? "bg-white border-slate-200 text-slate-500 hover:border-slate-400"
+                              : "bg-white/[0.03] border-white/10 text-slate-500 hover:border-white/30 hover:text-slate-300"
+                        }`}
+                      >
+                        {active && <span className="text-[10px] leading-none">✓</span>}
+                        {loc}
+                      </button>
+                    );
+                  })}
+                </div>
+              </Field>
+
+              <Field t={t} label="Number of Colors">
+                <div className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded-md border ${isLight ? "bg-white border-slate-200" : "bg-[#0d0e13] border-white/10"}`}>
+                  <button
+                    type="button"
+                    onClick={() => setNumColors(c => Math.max(1, c - 1))}
+                    className={`w-7 h-7 rounded flex items-center justify-center text-base font-black ${t.textMuted} hover:${t.text} hover:bg-white/[0.05] active:scale-95 transition-all`}
+                    aria-label="Decrease colors"
+                  >
+                    −
+                  </button>
+                  <div className="flex-1 flex items-center gap-1.5">
+                    <span className={`text-[15px] font-black font-mono ${t.text}`}>{numColors}</span>
+                    <span className={`text-[10px] font-bold uppercase tracking-widest ${t.textMuted}`}>{numColors === 1 ? "color" : "colors"}</span>
+                    <div className="flex-1" />
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: Math.min(numColors, 8) }).map((_, i) => (
+                        <span
+                          key={i}
+                          className="w-3 h-3 rounded-full border border-slate-300"
+                          style={{ backgroundColor: ["#111", "#fff", "#e60000", "#4169e1", "#ffc72c", "#009e60", "#6a0dad", "#ff7518"][i] }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setNumColors(c => Math.min(20, c + 1))}
+                    className={`w-7 h-7 rounded flex items-center justify-center text-base font-black ${t.textMuted} hover:${t.text} hover:bg-white/[0.05] active:scale-95 transition-all`}
+                    aria-label="Increase colors"
+                  >
+                    +
+                  </button>
+                </div>
+              </Field>
+
+              <Field t={t} label="Special Instructions">
+                <textarea
+                  rows={3}
+                  value={printNotes}
+                  onChange={(e) => setPrintNotes(e.target.value)}
+                  placeholder="e.g. Use high-density ink for front design. Match PMS 186 C for red."
+                  className={inputCls + " resize-none text-[12px] leading-snug"}
+                />
+              </Field>
+            </div>
+          </SectionCard>
+
+          {/* SECTION 5 — Artwork / Files (xl: 4 of 12) ---------------------- */}
+          <SectionCard t={t} num={5} title="Artwork / Files" className="md:col-span-1 xl:col-span-4">
+            <div className="flex flex-col gap-3">
+
+              {/* Dropzone */}
+              <div
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleUpload(e.dataTransfer.files); }}
+                onClick={() => fileInputRef.current?.click()}
+                className={`relative cursor-pointer rounded-lg border-2 border-dashed transition-all flex flex-col items-center justify-center text-center py-6 px-4 ${
+                  isDragging
+                    ? "border-sky-500 bg-sky-500/10"
+                    : isLight
+                      ? "border-slate-300 bg-slate-50 hover:border-sky-400 hover:bg-sky-50/40"
+                      : "border-white/15 bg-white/[0.02] hover:border-sky-500/50 hover:bg-sky-500/[0.04]"
+                }`}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,application/pdf,.ai,.psd,.eps"
+                  onChange={(e) => handleUpload(e.target.files)}
+                  className="hidden"
+                />
+                {isUploading ? (
+                  <>
+                    <div className="w-7 h-7 border-2 border-sky-500 border-t-transparent rounded-full animate-spin mb-2" />
+                    <p className={`text-[11px] font-black uppercase tracking-widest ${t.text}`}>Uploading…</p>
+                  </>
+                ) : (
+                  <>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`mb-1.5 ${t.textMuted}`}>
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <p className={`text-[12px] font-black uppercase tracking-widest ${t.text}`}>Drag & drop files here</p>
+                    <p className={`text-[10px] font-medium ${t.textMuted} mt-0.5`}>or <span className="text-sky-500">click to browse</span></p>
+                    <p className={`text-[9px] font-medium ${t.textMuted} mt-1`}>AI · PSD · PDF · EPS · PNG · JPG (max 200MB)</p>
+                  </>
+                )}
+              </div>
+
+              {/* File list */}
+              {files.length > 0 && (
+                <div className="flex flex-col gap-1.5">
+                  <div className={`flex items-center justify-between text-[9px] font-black uppercase tracking-widest ${t.textMuted}`}>
+                    <span>{files.length} file{files.length === 1 ? "" : "s"} attached</span>
+                    <span>{files.filter(f => f.status === "print-ready").length} ready · {files.filter(f => f.status === "awaiting-approval").length} pending</span>
+                  </div>
+                  {files.map(f => (
+                    <div key={f.id} className={`group flex items-center gap-2 p-2 rounded-md border ${isLight ? "bg-white border-slate-200" : "bg-white/[0.03] border-white/10"}`}>
+                      {/* Thumbnail */}
+                      <div className={`shrink-0 w-10 h-10 rounded-md overflow-hidden flex items-center justify-center ${isLight ? "bg-slate-100" : "bg-black/40"}`}>
+                        {f.isImage ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={f.url} alt={f.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-base">📄</span>
+                        )}
+                      </div>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <a href={f.url} target="_blank" rel="noopener noreferrer" className={`block text-[12px] font-bold truncate ${t.text} hover:text-sky-500`} title={f.name}>
+                          {f.name}
+                        </a>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className={`text-[9px] font-mono ${t.textMuted}`}>{formatFileSize(f.size)}</span>
+                          <button
+                            type="button"
+                            onClick={() => setFileStatus(f.id, f.status === "print-ready" ? "awaiting-approval" : "print-ready")}
+                            className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded transition-colors ${
+                              f.status === "print-ready"
+                                ? "bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500/25"
+                                : "bg-amber-500/15 text-amber-500 hover:bg-amber-500/25"
+                            }`}
+                            title="Click to toggle status"
+                          >
+                            {f.status === "print-ready" ? "✓ Print Ready" : "⏳ Awaiting Approval"}
+                          </button>
+                        </div>
+                      </div>
+                      {/* Remove */}
+                      <button
+                        type="button"
+                        onClick={() => removeFile(f)}
+                        className="shrink-0 w-7 h-7 rounded flex items-center justify-center text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all opacity-60 group-hover:opacity-100"
+                        aria-label={`Remove ${f.name}`}
+                        title="Remove file"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </SectionCard>
 
           {/* SECTION 6 — Pricing Summary (xl: 4 of 12) — Phase 4 ------------ */}
           <SectionCard t={t} num={6} title="Pricing Summary" hint="Phase 4" className="md:col-span-2 xl:col-span-4" placeholder="Auto-calculates from line items + setup + rush + tax" />
