@@ -93,6 +93,8 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { parseYayaMeta, type YayaMeta } from "@/lib/yaya-meta";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { QRCodeCanvas } from "qrcode.react";
 
@@ -614,6 +616,15 @@ export default function MyDayPage() {
   // UI state
   const [captureInput, setCaptureInput] = useState("");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  // ─── SELECTED-JOB STATE (right column) ───────────────────────────────────
+  // Single id to drive the "Selected Job Details" panel in col 4. When the
+  // user clicks any calendar card / agenda row, this gets set; when null
+  // we fall back to the first scheduled task.
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  // Cached YayaMeta + thumbnail per linked job_id, so flipping between
+  // tasks doesn't re-fetch the same row from supabase.
+  const [selectedMetaCache, setSelectedMetaCache] = useState<Record<string, { meta: YayaMeta | null; thumbnail: string | null; jobNumber?: number }>>({});
+
   // Tracks ids of tasks with an in-flight DB write. fetchTasks() consults this
   // set so refetches (post-insert, realtime, autoPack…) never overwrite a row
   // whose update is still on the wire — that was the cause of the
@@ -1371,6 +1382,45 @@ export default function MyDayPage() {
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
     [tasks]
   );
+  // Resolve the task object whose details we render in col 4. Falls back
+  // to the first scheduled task so the panel is never empty when the day
+  // has events.
+  const selectedTask = useMemo(() => {
+    if (selectedTaskId) {
+      const found = tasks.find(t => t.id === selectedTaskId);
+      if (found) return found;
+    }
+    return tasks.filter(t => t.target_time).sort((a, b) => minsFromTime(a.target_time) - minsFromTime(b.target_time))[0] ?? tasks[0] ?? null;
+  }, [tasks, selectedTaskId]);
+
+  // Pull the linked job's quote (with internal_notes containing YayaMeta)
+  // and any image attachment — once per job_id, then cached.
+  useEffect(() => {
+    const jid = selectedTask?.job_id;
+    if (!jid || selectedMetaCache[jid]) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("jobs")
+        .select(`job_number, attachment_url, quotes ( internal_notes )`)
+        .eq("id", jid)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      const notes = (data as any)?.quotes?.internal_notes ?? null;
+      const url = (data as any)?.attachment_url ?? null;
+      const isImg = typeof url === "string" && /\.(png|jpe?g|gif|webp|avif)(\?.*)?$/i.test(url);
+      setSelectedMetaCache(prev => ({
+        ...prev,
+        [jid]: {
+          meta: parseYayaMeta(notes),
+          thumbnail: isImg ? url : null,
+          jobNumber: (data as any)?.job_number,
+        },
+      }));
+    })();
+    return () => { cancelled = true; };
+  }, [selectedTask?.job_id, selectedMetaCache]);
+
   const completedToday = useMemo(() => tasks.filter(t => t.is_completed).length, [tasks]);
   const totalToday = tasks.length;
   const progressPct = totalToday > 0 ? Math.round((completedToday / totalToday) * 100) : 0;
@@ -1673,7 +1723,7 @@ export default function MyDayPage() {
               view={timelineView}
               tasks={scheduledTasks}
               onToggle={toggleComplete}
-              onEdit={setEditingTask}
+              onEdit={(t) => { setSelectedTaskId(t.id); setEditingTask(t); }}
               isToday={isToday}
               draggingJob={draggingJob}
               draggingTaskId={draggingTaskId}
@@ -1713,8 +1763,8 @@ export default function MyDayPage() {
                       {/* dot */}
                       <span className={`absolute left-0 top-1.5 w-3 h-3 rounded-full ${cls.chip} ring-2 ring-white dark:ring-slate-950`} />
                       <button
-                        onClick={() => setEditingTask(t)}
-                        className="w-full text-left group"
+                        onClick={() => setSelectedTaskId(t.id)}
+                        className={`w-full text-left group rounded-md px-1 -mx-1 transition-colors ${selectedTaskId === t.id ? "bg-sky-500/10" : ""}`}
                       >
                         <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                           {fmt12hr(t.target_time)}
@@ -1779,9 +1829,126 @@ export default function MyDayPage() {
 
         {/* ─── COL 4 · SELECTED JOB DETAILS ──────────────────────────────── */}
         <div className="hidden xl:flex xl:col-span-2 flex-col gap-4 min-w-0">
-          <PanelShell title="Selected Job Details">
-            <div className="text-[11px] text-slate-400 dark:text-slate-500">Phase D — click any calendar card to see job details here.</div>
-          </PanelShell>
+          {(() => {
+            const t = selectedTask;
+            if (!t) {
+              return (
+                <PanelShell title="Selected Job Details">
+                  <div className="text-[11px] text-slate-400 dark:text-slate-500 text-center py-6">
+                    Click any calendar card or agenda row to see details here.
+                  </div>
+                </PanelShell>
+              );
+            }
+            const cached = t.job_id ? selectedMetaCache[t.job_id] : null;
+            const meta = cached?.meta ?? null;
+            const thumbnail = cached?.thumbnail ?? null;
+            const jobNumber = cached?.jobNumber ?? t.jobs?.job_number;
+            const isRush = t.priority === "urgent" || t.priority === "high" || meta?.rushOrder;
+            const cat = CATEGORIES.find(c => c.id === t.category) || CATEGORIES[0];
+            const cls = CATEGORY_CLASSES[cat.color];
+            const completed = (meta?.workflowSteps ?? []).filter(s => s.completedAt).length;
+            const total = (meta?.workflowSteps ?? []).length;
+            const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+            const dueLabel = (() => {
+              if (!t.target_time) return "";
+              return isToday ? `Due Today ${fmt12hr(t.target_time)}` : `Due ${selectedDate} ${fmt12hr(t.target_time)}`;
+            })();
+
+            return (
+              <PanelShell title="Selected Job Details">
+                <div className="flex flex-col gap-3">
+                  {/* Header row: order# + RUSH chip */}
+                  <div className="flex items-center gap-2">
+                    {jobNumber && <span className="text-[14px] font-black tracking-tight text-slate-900 dark:text-white">#{jobNumber}</span>}
+                    {!jobNumber && <span className={`w-2.5 h-2.5 rounded-full ${cls.chip}`} />}
+                    {isRush && <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-rose-500 text-white">RUSH</span>}
+                  </div>
+
+                  {/* Thumbnail */}
+                  {thumbnail && (
+                    <a href={thumbnail} target="_blank" rel="noopener noreferrer" className="block aspect-[4/3] rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={thumbnail} alt="" className="w-full h-full object-contain" />
+                    </a>
+                  )}
+
+                  {/* Customer + qty + method */}
+                  <div>
+                    <div className="text-[14px] font-black tracking-tight text-slate-900 dark:text-white truncate">
+                      {t.customers?.company_name || t.title}
+                    </div>
+                    {meta?.printMethod && (
+                      <span className="inline-block mt-1 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-600 dark:text-violet-400">
+                        {meta.printMethod}
+                      </span>
+                    )}
+                  </div>
+
+                  {dueLabel && (
+                    <div className={`text-[11px] font-black uppercase tracking-widest ${isRush || isToday ? "text-rose-500" : "text-slate-500"}`}>
+                      {dueLabel}
+                    </div>
+                  )}
+
+                  {/* Detail rows */}
+                  <dl className="border-t border-slate-200 dark:border-slate-800 pt-3 space-y-1.5 text-[11px]">
+                    {t.customers?.company_name && <DetailRow label="Customer" value={t.customers.company_name} />}
+                    {jobNumber && <DetailRow label="Order #" value={`#${jobNumber}`} mono />}
+                    {meta?.orderType && <DetailRow label="Type" value={meta.orderType} />}
+                    {meta?.salesRep && <DetailRow label="Sales Rep" value={meta.salesRep} />}
+                    {meta?.paymentStatus && <DetailRow label="Payment" value={`${meta.paymentStatus}${meta.paymentStatus === "Deposit Required" && meta.depositPercent != null ? ` (${meta.depositPercent}%)` : ""}`} />}
+                    {meta?.deliveryMethod && <DetailRow label="Delivery" value={meta.deliveryMethod} capitalize />}
+                    {meta?.printMethod && <DetailRow label="Print Method" value={meta.printMethod} />}
+                    {meta?.printLocations && meta.printLocations.length > 0 && <DetailRow label="Print Locations" value={meta.printLocations.join(", ")} />}
+                    {meta?.numColors != null && <DetailRow label="Colors" value={String(meta.numColors)} />}
+                    <DetailRow label="Time" value={t.target_time ? fmt12hr(t.target_time) : "Unscheduled"} />
+                    <DetailRow label="Duration" value={`${t.duration_minutes}m`} />
+                  </dl>
+
+                  {/* Workflow / Job Checklist */}
+                  {total > 0 && (
+                    <div className="border-t border-slate-200 dark:border-slate-800 pt-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Job Checklist</span>
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${completed > 0 ? "text-emerald-500" : "text-slate-400"}`}>{completed}/{total}</span>
+                      </div>
+                      <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-2.5">
+                        <div className="h-full bg-gradient-to-r from-sky-500 to-emerald-500" style={{ width: `${pct}%` }} />
+                      </div>
+                      <ul className="flex flex-col gap-1">
+                        {meta!.workflowSteps!.map(s => {
+                          const done = !!s.completedAt;
+                          return (
+                            <li key={s.id} className="flex items-center gap-2 text-[11px]">
+                              <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-black border ${
+                                done ? "bg-emerald-500 border-emerald-400 text-white" : "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900"
+                              }`}>{done ? "✓" : ""}</span>
+                              <span className={`flex-1 truncate ${done ? "text-slate-500 line-through" : "text-slate-700 dark:text-slate-300"}`}>{s.label}</span>
+                              <span className={`text-[9px] font-bold uppercase tracking-widest ${done ? "text-emerald-500" : "text-slate-400"}`}>
+                                {done ? "Done" : "Pending"}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Open Job CTA */}
+                  {t.job_id && (
+                    <Link
+                      href={`/queue?job=${t.job_id}`}
+                      className="mt-1 w-full bg-sky-500 hover:bg-sky-400 text-white text-[11px] font-black uppercase tracking-widest text-center py-2.5 rounded-lg shadow-[0_4px_14px_-4px_rgba(14,165,233,0.6)] transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                    >
+                      Open Job
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </Link>
+                  )}
+                </div>
+              </PanelShell>
+            );
+          })()}
         </div>
       </div>
 
@@ -4180,6 +4347,18 @@ function PanelShell({ title, badge, accent, children }: {
         )}
       </header>
       <div className="p-4">{children}</div>
+    </div>
+  );
+}
+
+// Tiny label/value row for the Selected Job Details panel.
+function DetailRow({ label, value, mono, capitalize }: {
+  label: string; value: string; mono?: boolean; capitalize?: boolean;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-2">
+      <dt className="text-[10px] font-bold uppercase tracking-widest text-slate-500 shrink-0">{label}</dt>
+      <dd className={`text-[11px] font-bold text-slate-800 dark:text-slate-200 text-right truncate ${mono ? "font-mono" : ""} ${capitalize ? "capitalize" : ""}`}>{value}</dd>
     </div>
   );
 }
