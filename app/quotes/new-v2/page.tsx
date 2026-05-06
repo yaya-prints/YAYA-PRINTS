@@ -196,6 +196,15 @@ export default function CreateNewOrderV2() {
   const [numColors, setNumColors] = useState(1);
   const [printNotes, setPrintNotes] = useState("");
 
+  // ---- PRICING + INTERNAL NOTES STATE --------------------------------------
+  const [setupFees, setSetupFees] = useState(0);
+  const [addOnCharges, setAddOnCharges] = useState(0);
+  const [shippingFee, setShippingFee] = useState(0);
+  const [taxRate, setTaxRate] = useState(8.25); // percent
+  const [specialInstructions, setSpecialInstructions] = useState("");
+  const [packagingNotes, setPackagingNotes] = useState("");
+  const [qcNotes, setQcNotes] = useState("");
+
   // ---- ARTWORK FILES STATE -------------------------------------------------
   // Persisted so we can survive a page refresh during a long order build.
   // Each file is a session-scoped draft id; on save (Phase 6) the rows get
@@ -303,6 +312,23 @@ export default function CreateNewOrderV2() {
 
   const totalUnits = useMemo(() => lines.reduce((sum, l) => sum + lineQty(l), 0), [lines]);
   const subtotal   = useMemo(() => lines.reduce((sum, l) => sum + lineTotal(l), 0), [lines]);
+
+  // Pricing breakdown — order of ops mirrors the screenshot:
+  // Subtotal + Setup + AddOns => preTax.  Rush is +15% on preTax (if on).
+  // Tax applies to (preTax + rush).  Shipping is added after tax.
+  const rushFee     = useMemo(() => rushOrder ? (subtotal + setupFees + addOnCharges) * 0.15 : 0, [rushOrder, subtotal, setupFees, addOnCharges]);
+  const preTaxTotal = useMemo(() => subtotal + setupFees + addOnCharges + rushFee, [subtotal, setupFees, addOnCharges, rushFee]);
+  const taxAmount   = useMemo(() => preTaxTotal * (taxRate / 100), [preTaxTotal, taxRate]);
+  const grandTotal  = useMemo(() => preTaxTotal + taxAmount + shippingFee, [preTaxTotal, taxAmount, shippingFee]);
+  const depositAmount = useMemo(() => paymentStatus === "Deposit Required" ? grandTotal * (depositPercent / 100) : 0, [grandTotal, depositPercent, paymentStatus]);
+
+  // Margin estimate — uses each line's regular_price as MSRP and unit_price
+  // as our cost-to-customer. Rough proxy until we add a true cost field.
+  const estProfit = useMemo(() => lines.reduce((sum, l) => {
+    const margin = (l.unit_price || 0) - (l.regular_price || 0);
+    return sum + margin * lineQty(l);
+  }, 0), [lines]);
+  const estMarginPct = grandTotal > 0 ? (estProfit / grandTotal) * 100 : 0;
   const productSearchTerms = useMemo(() => catalog.filter(c =>
     !c.category || (c.category !== "Print Media" && c.category !== "Misc" && c.category !== "Services" && c.category !== "Design" && c.category !== "Custom Insert" && c.category !== "Upsells")
   ), [catalog]);
@@ -920,11 +946,115 @@ export default function CreateNewOrderV2() {
             </div>
           </SectionCard>
 
-          {/* SECTION 6 — Pricing Summary (xl: 4 of 12) — Phase 4 ------------ */}
-          <SectionCard t={t} num={6} title="Pricing Summary" hint="Phase 4" className="md:col-span-2 xl:col-span-4" placeholder="Auto-calculates from line items + setup + rush + tax" />
+          {/* SECTION 6 — Pricing Summary (xl: 4 of 12) ---------------------- */}
+          <SectionCard t={t} num={6} title="Pricing Summary" className="md:col-span-2 xl:col-span-4">
+            <div className="flex flex-col gap-1.5 text-[12px]">
 
-          {/* SECTION 7 — Internal Notes (full width) — Phase 4 -------------- */}
-          <SectionCard t={t} num={7} title="Internal Notes / Production Notes" hint="Phase 4" className="md:col-span-2 xl:col-span-12" placeholder="Special Instructions • Packaging Notes • QC Notes — three-column layout" />
+              <PriceRow t={t} label="Subtotal" value={subtotal} mono />
+              <div className="flex items-center justify-between gap-2">
+                <span className={`text-[10px] font-black uppercase tracking-widest ${t.textMuted}`}>Setup Fees</span>
+                <input
+                  type="number" min={0} step={5}
+                  value={setupFees || ""}
+                  onChange={(e) => setSetupFees(parseFloat(e.target.value) || 0)}
+                  placeholder="0.00"
+                  className={inputSm + " w-24 text-right font-mono"}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className={`text-[10px] font-black uppercase tracking-widest ${t.textMuted}`}>Add-on Charges</span>
+                <input
+                  type="number" min={0} step={5}
+                  value={addOnCharges || ""}
+                  onChange={(e) => setAddOnCharges(parseFloat(e.target.value) || 0)}
+                  placeholder="0.00"
+                  className={inputSm + " w-24 text-right font-mono"}
+                />
+              </div>
+
+              {rushOrder && (
+                <PriceRow t={t} label="Rush Fee (15%)" value={rushFee} mono accent="rose" />
+              )}
+
+              <div className="flex items-center justify-between gap-2">
+                <span className={`text-[10px] font-black uppercase tracking-widest ${t.textMuted}`}>Shipping</span>
+                <input
+                  type="number" min={0} step={1}
+                  value={shippingFee || ""}
+                  onChange={(e) => setShippingFee(parseFloat(e.target.value) || 0)}
+                  placeholder="0.00"
+                  className={inputSm + " w-24 text-right font-mono"}
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-2">
+                <span className={`text-[10px] font-black uppercase tracking-widest ${t.textMuted} flex items-center gap-1.5`}>
+                  Tax
+                  <input
+                    type="number" min={0} max={30} step={0.25}
+                    value={taxRate}
+                    onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
+                    className={`w-12 text-center font-mono text-[10px] py-0.5 px-1 rounded border outline-none focus:border-sky-500 ${t.inputBg}`}
+                  />
+                  <span>%</span>
+                </span>
+                <span className={`text-[12px] font-mono font-bold ${t.text}`}>${taxAmount.toFixed(2)}</span>
+              </div>
+
+              {paymentStatus === "Deposit Required" && (
+                <PriceRow t={t} label={`Deposit (${depositPercent}%)`} value={-depositAmount} mono accent="emerald" />
+              )}
+
+              {/* Grand Total */}
+              <div className={`flex items-center justify-between gap-2 mt-1 pt-2.5 border-t ${t.cardBorder}`}>
+                <span className={`text-[12px] font-black uppercase tracking-widest ${t.text}`}>Grand Total</span>
+                <span className="text-[20px] font-black font-mono text-sky-500 tracking-tight">${grandTotal.toFixed(2)}</span>
+              </div>
+
+              {/* Est. Profit / Margin */}
+              {(estProfit !== 0 && grandTotal > 0) && (
+                <div className={`flex items-center justify-between gap-2 mt-1`}>
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${t.textMuted}`}>Est. Profit / Margin</span>
+                  <span className={`text-[11px] font-mono font-bold ${estProfit >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
+                    ${estProfit.toFixed(2)} ({estMarginPct.toFixed(1)}%)
+                  </span>
+                </div>
+              )}
+            </div>
+          </SectionCard>
+
+          {/* SECTION 7 — Internal Notes (full width) ------------------------ */}
+          <SectionCard t={t} num={7} title="Internal Notes / Production Notes" className="md:col-span-2 xl:col-span-12">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <Field t={t} label="Special Instructions">
+                <textarea
+                  rows={3}
+                  value={specialInstructions}
+                  onChange={(e) => setSpecialInstructions(e.target.value)}
+                  placeholder="Customer wants extra soft feel on tees. Use low-cure ink."
+                  className={inputCls + " resize-none text-[12px] leading-snug"}
+                />
+              </Field>
+              <Field t={t} label="Packaging Notes">
+                <textarea
+                  rows={3}
+                  value={packagingNotes}
+                  onChange={(e) => setPackagingNotes(e.target.value)}
+                  placeholder="Fold & bag individually. Include thank-you card."
+                  className={inputCls + " resize-none text-[12px] leading-snug"}
+                />
+              </Field>
+              <Field t={t} label="QC Notes">
+                <textarea
+                  rows={3}
+                  value={qcNotes}
+                  onChange={(e) => setQcNotes(e.target.value)}
+                  placeholder="Check print alignment on hoodies. Verify logo placement on caps."
+                  className={inputCls + " resize-none text-[12px] leading-snug"}
+                />
+              </Field>
+            </div>
+          </SectionCard>
 
           {/* SECTION 8 — Workflow / Next Steps (full width) — Phase 5 ------- */}
           <SectionCard t={t} num={8} title="Workflow / Next Steps" hint="Phase 5" className="md:col-span-2 xl:col-span-12" placeholder="Quote Sent → Artwork Approval → Deposit → To Buy → To Print → To Press → Packaging → Ready" />
@@ -952,6 +1082,7 @@ export default function CreateNewOrderV2() {
               />
               <Row label="Total Units" value={totalUnits.toString()} highlight={totalUnits > 0} />
               <Row label="Subtotal" value={`$${subtotal.toFixed(2)}`} mono highlight={subtotal > 0} />
+              <Row label="Grand Total" value={`$${grandTotal.toFixed(2)}`} mono highlight={grandTotal > 0} suffix={paymentStatus === "Deposit Required" && depositAmount > 0 ? <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-500">Dep ${depositAmount.toFixed(0)}</span> : null} />
               <Row label="Order Type" value={orderType} />
               <Row label="Payment" value={paymentStatus} suffix={paymentStatus === "Deposit Required" ? <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-500">{depositPercent}%</span> : null} />
               <Row label="Sales Rep" value={salesRep} />
@@ -1110,6 +1241,26 @@ function ColorPicker({ value, onChange, t, isLight }: {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function PriceRow({
+  label, value, mono, accent, t,
+}: {
+  label: string;
+  value: number;
+  mono?: boolean;
+  accent?: "rose" | "emerald" | "amber";
+  t: ThemeTokens;
+}) {
+  const valueColor = accent === "rose" ? "text-rose-500" : accent === "emerald" ? "text-emerald-500" : accent === "amber" ? "text-amber-500" : t.text;
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className={`text-[10px] font-black uppercase tracking-widest ${t.textMuted}`}>{label}</span>
+      <span className={`text-[12px] font-bold ${mono ? "font-mono" : ""} ${valueColor}`}>
+        {value < 0 ? `−$${Math.abs(value).toFixed(2)}` : `$${value.toFixed(2)}`}
+      </span>
     </div>
   );
 }
