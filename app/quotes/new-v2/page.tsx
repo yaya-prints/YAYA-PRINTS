@@ -9,7 +9,7 @@
 // reference design, minimizing vertical scroll on desktop.
 // =============================================================================
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
@@ -57,7 +57,49 @@ type ThemeTokens = {
 };
 
 // ---- CONSTANTS --------------------------------------------------------------
-const GILDAN_COLORS = ["White", "Black", "Navy", "Sport Grey", "Red", "Royal", "Dark Heather", "Charcoal", "Forest Green", "Gold", "Maroon", "Safety Pink", "Safety Orange"];
+// Color palette + hex map mirrored from /app/mockup-v2/page.tsx so this page
+// shows real garment colours with accurate swatches. If the mockup page adds
+// or renames a colour, update both.
+const ALL_COLORS = [
+  "White", "Black", "Charcoal", "Dark Heather", "Sport Grey", "Navy",
+  "Off White", "Ice Grey", "Paragon", "Graphite Heather", "Heather Dark Grey",
+  "Natural", "Cornsilk", "Sand", "Dark Chocolate",
+  "Daisy", "Gold", "Old Gold", "Orange", "Heather Orange", "Safety Orange",
+  "Light Pink", "Safety Pink", "Azalea", "Coral Silk", "Heliconia", "Antique Heliconia", "Heather Heliconia",
+  "Heather Berry", "Cherry Red", "Antique Cherry Red", "Red", "Heather Red", "Heather Scarlet Red",
+  "Cardinal Red", "Heather Cardinal Red", "Garnet", "Maroon", "Heather Maroon", "Heather Dark Maroon",
+  "Heather Radiant Orchid", "Orchid", "Iris", "Violet", "Purple", "Heather Purple",
+  "Sky", "Light Blue", "Carolina Blue", "Stone Blue", "Tropical Blue", "Sapphire",
+  "Antique Sapphire", "Heather Sapphire", "Heather Galapagos Blue", "Royal",
+  "Heather Royal", "Heather Deep Royal", "Indigo Blue", "Heather Indigo",
+  "Metro Blue", "Heather Navy", "Heather Dark Navy",
+  "Mint Green", "Pistachio", "Lime", "Kiwi", "Sage", "Irish Green",
+  "Heather Irish Green", "Kelly Green", "Jade Dome", "Forest", "Forest Green",
+  "Heather Dark Green", "Military Green", "Heather Military Green", "Safety Green",
+  "Ash",
+];
+const COLOR_HEX: Record<string, string> = {
+  "Antique Cherry Red":"#7C1C29","Antique Heliconia":"#D14578","Antique Sapphire":"#126B88","Ash":"#D7D7D7",
+  "Azalea":"#F089B2","Black":"#111111","Cardinal Red":"#8A1529","Carolina Blue":"#7BAFD4","Charcoal":"#4F5254",
+  "Cherry Red":"#B80F2A","Coral Silk":"#F08080","Cornsilk":"#FFF8DC","Daisy":"#FFD700","Dark Chocolate":"#35231D",
+  "Dark Heather":"#4B4F55","Forest":"#182C25","Forest Green":"#182C25","Garnet":"#5F121F","Gold":"#FFC72C",
+  "Graphite Heather":"#454545","Heather Berry":"#8B3A62","Heather Cardinal Red":"#7D2B3A","Heather Dark Green":"#2d4235",
+  "Heather Dark Grey":"#555555","Heather Dark Maroon":"#5d1e2e","Heather Dark Navy":"#2b3447","Heather Deep Royal":"#3b5ba5",
+  "Heather Galapagos Blue":"#2A6E82","Heather Heliconia":"#C14B74","Heather Indigo":"#384B66","Heather Irish Green":"#3A8E5D",
+  "Heather Maroon":"#5C2634","Heather Military Green":"#545C44","Heather Navy":"#2F3B4C","Heather Orange":"#D86E45",
+  "Heather Purple":"#5C466A","Heather Radiant Orchid":"#A865B5","Heather Red":"#B33E4C","Heather Royal":"#4A77B4",
+  "Heather Sapphire":"#3F7696","Heather Scarlet Red":"#b93d47","Heliconia":"#DB3E79","Ice Grey":"#C4C6C8",
+  "Indigo Blue":"#475D74","Irish Green":"#009E60","Iris":"#5D3FD3","Jade Dome":"#00A86B","Kelly Green":"#4CBB17",
+  "Kiwi":"#8EE53F","Light Blue":"#ADD8E6","Light Pink":"#FFB6C1","Lime":"#BFFF00","Maroon":"#500000",
+  "Metro Blue":"#1A3256","Military Green":"#4B5320","Mint Green":"#98FF98","Natural":"#EBE5D5","Navy":"#000080",
+  "Off White":"#F8F8FF","Old Gold":"#CFB53B","Orange":"#FFA500","Orchid":"#DA70D6","Paragon":"#9C9C9C",
+  "Pistachio":"#93C572","Purple":"#6A0DAD","Red":"#E60000","Royal":"#4169E1","Safety Green":"#CEFF00",
+  "Safety Orange":"#FF7518","Safety Pink":"#FF1DCE","Sage":"#B2AC88","Sand":"#C2B280","Sapphire":"#0F52BA",
+  "Sky":"#87CEEB","Sport Grey":"#9E9E9E","Stone Blue":"#5C7893","Tropical Blue":"#00BFFF","Violet":"#7851A9",
+  "White":"#FFFFFF",
+};
+const colorHex = (name: string) => COLOR_HEX[name] || "#cccccc";
+
 const SIZE_KEYS = ["xs", "s", "m", "l", "xl", "xxl", "xxxl", "xxxxl", "xxxxxl"] as const;
 const SIZE_LABELS: Record<(typeof SIZE_KEYS)[number], string> = {
   xs: "XS", s: "S", m: "M", l: "L", xl: "XL", xxl: "2X", xxxl: "3X", xxxxl: "4X", xxxxxl: "5X",
@@ -467,17 +509,17 @@ export default function CreateNewOrderV2() {
                   return (
                     <div key={line.id} className={`rounded-lg border ${isLight ? "bg-slate-50/50 border-slate-200" : "bg-white/[0.02] border-white/5"} p-2.5 flex flex-col gap-2`}>
 
-                      {/* Top row: product + color + total + delete */}
-                      <div className="flex items-center gap-2">
+                      {/* Row 1: Product name (prominent, full width) + delete */}
+                      <div className="flex items-start gap-2">
                         <div className="relative flex-1 min-w-0">
                           <input
                             type="text"
                             value={line.description}
-                            placeholder="Product / style…"
+                            placeholder="Search products or type a product / style…"
                             onChange={(e) => updateLine(line.id, { description: e.target.value })}
                             onFocus={() => setProductSearchOpen(line.id)}
                             onBlur={() => setTimeout(() => setProductSearchOpen(prev => prev === line.id ? null : prev), 150)}
-                            className={inputSm}
+                            className={inputCls}
                           />
                           {dropdownOpen && (
                             <div className={`absolute top-full left-0 right-0 mt-1 ${t.cardBg} ${t.cardBorder} border rounded-md shadow-2xl overflow-hidden z-20 max-h-52 overflow-y-auto`}>
@@ -494,57 +536,35 @@ export default function CreateNewOrderV2() {
                                     });
                                     setProductSearchOpen(null);
                                   }}
-                                  className={`w-full text-left px-2.5 py-1.5 hover:bg-sky-500/10 transition-colors flex items-center justify-between gap-2 ${t.cardBorder} border-b last:border-b-0`}
+                                  className={`w-full text-left px-3 py-2 hover:bg-sky-500/10 transition-colors flex items-center justify-between gap-2 ${t.cardBorder} border-b last:border-b-0`}
                                 >
-                                  <span className={`text-[12px] font-bold truncate ${t.text}`}>{p.name}</span>
-                                  {p.default_price != null && <span className={`text-[10px] font-mono ${t.textMuted} shrink-0`}>${p.default_price}</span>}
+                                  <span className={`text-[13px] font-bold truncate ${t.text}`}>{p.name}</span>
+                                  {p.default_price != null && <span className={`text-[11px] font-mono ${t.textMuted} shrink-0`}>${p.default_price}</span>}
                                 </button>
                               ))}
                             </div>
                           )}
                         </div>
 
-                        <select
-                          value={line.color}
-                          onChange={(e) => updateLine(line.id, { color: e.target.value })}
-                          className={inputSm + " w-24 shrink-0 cursor-pointer"}
-                        >
-                          {GILDAN_COLORS.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-
-                        <div className={`flex flex-col items-end shrink-0 ${qty > 0 ? "" : "opacity-40"}`}>
-                          <span className={`text-[9px] font-black uppercase tracking-widest ${t.textMuted} leading-none`}>{qty} units</span>
-                          <span className={`text-[12px] font-black font-mono ${t.text} leading-tight`}>${total.toFixed(2)}</span>
-                        </div>
-
                         <button
                           type="button"
                           onClick={() => removeLine(line.id)}
-                          className={`shrink-0 w-7 h-7 rounded-md flex items-center justify-center text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all`}
+                          className="shrink-0 w-9 h-9 rounded-md flex items-center justify-center text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all"
                           aria-label="Remove line"
+                          title="Remove line"
                         >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
                         </button>
                       </div>
 
-                      {/* Sizes row + unit price */}
-                      <div className="flex items-end gap-2 overflow-x-auto no-scrollbar">
-                        {SIZE_KEYS.map(sz => (
-                          <div key={sz} className="flex flex-col items-center shrink-0">
-                            <span className={`text-[9px] font-black uppercase tracking-widest ${t.textMuted} leading-none mb-0.5`}>{SIZE_LABELS[sz]}</span>
-                            <input
-                              type="number"
-                              min={0}
-                              value={line[sz] || ""}
-                              onChange={(e) => updateLine(line.id, { [sz]: parseInt(e.target.value) || 0 } as Partial<LineItem>)}
-                              placeholder="0"
-                              className={`w-9 text-center px-1 py-1 rounded text-[12px] font-bold font-mono outline-none border focus:border-sky-500 ${line[sz] > 0 ? (isLight ? "bg-white border-sky-300 text-sky-700" : "bg-sky-500/10 border-sky-500/40 text-sky-300") : (isLight ? "bg-white border-slate-200 text-slate-400" : "bg-[#0d0e13] border-white/10 text-slate-600")}`}
-                            />
-                          </div>
-                        ))}
+                      {/* Row 2: Color picker + total + unit price */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <ColorPicker value={line.color} onChange={(c) => updateLine(line.id, { color: c })} t={t} isLight={isLight} />
+
                         <div className="flex-1" />
-                        <div className="flex flex-col items-end shrink-0 ml-1">
-                          <span className={`text-[9px] font-black uppercase tracking-widest ${t.textMuted} leading-none mb-0.5`}>$/unit</span>
+
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-[9px] font-black uppercase tracking-widest ${t.textMuted}`}>$/unit</span>
                           <input
                             type="number"
                             min={0}
@@ -555,6 +575,28 @@ export default function CreateNewOrderV2() {
                             className={inputSm + " w-20 text-right font-mono"}
                           />
                         </div>
+
+                        <div className={`flex flex-col items-end shrink-0 px-2 ${qty > 0 ? "" : "opacity-40"}`}>
+                          <span className={`text-[9px] font-black uppercase tracking-widest ${t.textMuted} leading-none`}>{qty} units</span>
+                          <span className={`text-[13px] font-black font-mono leading-tight ${qty > 0 ? "text-emerald-500" : t.text}`}>${total.toFixed(2)}</span>
+                        </div>
+                      </div>
+
+                      {/* Row 3: Size matrix (scrolls horizontally on narrow widths) */}
+                      <div className="flex items-end gap-1 overflow-x-auto no-scrollbar -mx-1 px-1">
+                        {SIZE_KEYS.map(sz => (
+                          <div key={sz} className="flex flex-col items-center shrink-0">
+                            <span className={`text-[9px] font-black uppercase tracking-widest ${t.textMuted} leading-none mb-1`}>{SIZE_LABELS[sz]}</span>
+                            <input
+                              type="number"
+                              min={0}
+                              value={line[sz] || ""}
+                              onChange={(e) => updateLine(line.id, { [sz]: parseInt(e.target.value) || 0 } as Partial<LineItem>)}
+                              placeholder="0"
+                              className={`w-10 text-center px-1 py-1.5 rounded text-[13px] font-bold font-mono outline-none border focus:border-sky-500 ${line[sz] > 0 ? (isLight ? "bg-sky-50 border-sky-300 text-sky-700" : "bg-sky-500/15 border-sky-500/50 text-sky-300") : (isLight ? "bg-white border-slate-200 text-slate-400" : "bg-[#0d0e13] border-white/10 text-slate-500")}`}
+                            />
+                          </div>
+                        ))}
                       </div>
                     </div>
                   );
@@ -715,6 +757,79 @@ function Field({
       </span>
       {children}
     </label>
+  );
+}
+
+// Color picker — button shows the current swatch + name; clicking opens a
+// grid of every garment colour from the mockup-v2 palette. Defined outside
+// the page component for stable identity (otherwise inputs in the page
+// would lose focus on every render).
+function ColorPicker({ value, onChange, t, isLight }: {
+  value: string;
+  onChange: (c: string) => void;
+  t: ThemeTokens;
+  isLight: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const hex = colorHex(value);
+  const isLightSwatch = ["#FFFFFF", "#F8F8FF", "#EBE5D5", "#FFF8DC"].includes(hex);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className={`flex items-center gap-2 px-2 py-1.5 rounded-md border outline-none transition-colors hover:border-sky-500 ${t.inputBg}`}
+      >
+        <span
+          className={`w-4 h-4 rounded-full shrink-0 ${isLightSwatch ? "border border-slate-300" : ""}`}
+          style={{ backgroundColor: hex }}
+        />
+        <span className="text-[12px] font-bold truncate">{value}</span>
+        <span className={`text-[9px] ${t.textMuted}`}>▼</span>
+      </button>
+
+      {open && (
+        <div className={`absolute top-full left-0 mt-1 w-72 ${t.cardBg} ${t.cardBorder} border rounded-md shadow-2xl z-30 p-2 max-h-72 overflow-y-auto`}>
+          <div className="grid grid-cols-6 gap-1">
+            {ALL_COLORS.map(c => {
+              const cHex = colorHex(c);
+              const cLight = ["#FFFFFF", "#F8F8FF", "#EBE5D5", "#FFF8DC"].includes(cHex);
+              const selected = c === value;
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => { onChange(c); setOpen(false); }}
+                  title={c}
+                  className={`relative w-8 h-8 rounded-md transition-all hover:scale-110 active:scale-95 ${cLight ? "border border-slate-300" : ""} ${selected ? "ring-2 ring-sky-500 ring-offset-2 " + (isLight ? "ring-offset-white" : "ring-offset-[#13141a]") : ""}`}
+                  style={{ backgroundColor: cHex }}
+                />
+              );
+            })}
+          </div>
+          <div className={`mt-2 pt-2 border-t ${t.cardBorder} text-[10px] font-bold ${t.textMuted} text-center`}>
+            {value}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
