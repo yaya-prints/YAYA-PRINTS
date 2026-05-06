@@ -2,7 +2,26 @@
 
 import { useState, useEffect, useRef, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
+import { parseYayaMeta } from "@/lib/yaya-meta";
 import { useParams, useRouter } from "next/navigation";
+
+// Tiny Production-Details helpers (mirror /quotes/[id] for parity)
+function InvStat({ label, value, mono, capitalize }: { label: string; value: string; mono?: boolean; capitalize?: boolean }) {
+  return (
+    <div className="flex flex-col gap-0.5 min-w-0">
+      <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{label}</span>
+      <span className={`text-[12px] font-black text-slate-800 dark:text-slate-100 truncate ${mono ? "font-mono" : ""} ${capitalize ? "capitalize" : ""}`}>{value}</span>
+    </div>
+  );
+}
+function InvNote({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{label}</span>
+      <p className="text-[12px] text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-snug">{value}</p>
+    </div>
+  );
+}
 
 // --- DYNAMIC COLOR ENGINE ---
 const getColorHex = (colorName: string): string => {
@@ -346,10 +365,13 @@ export default function ProfessionalPrintableInvoice() {
   }, 0) || 0;
 
   const subtotal = (invoice.total_amount || 0) + totalSavings;
-  const tax = (invoice.total_amount || 0) * 0.13; 
+  const tax = (invoice.total_amount || 0) * 0.13;
   const grandTotal = (invoice.total_amount || 0) + tax;
   const amountPaid = invoice.amount_paid || 0;
   const balanceDue = grandTotal - amountPaid;
+  // Pull v2 metadata once — null on legacy invoices, otherwise gives us the
+  // user's actual order number + a per-line pricing breakdown.
+  const meta = parseYayaMeta(invoice.internal_notes);
 
   // --- DYNAMIC PDF FILENAME FIX ---
   const handlePrint = () => {
@@ -495,6 +517,140 @@ export default function ProfessionalPrintableInvoice() {
         )}
       </div>
 
+      {/* PRODUCTION DETAILS — internal only, same panel as /quotes/[id]
+          for orders saved through /quotes/new-v2. Drives parity between
+          the quote and invoice views so production reads the same info. */}
+      {(() => {
+        if (!meta) return null;
+        const completedSteps = (meta.workflowSteps ?? []).filter(s => s.completedAt).length;
+        const totalSteps = (meta.workflowSteps ?? []).length;
+        return (
+          <div className="w-full max-w-[210mm] mb-6 print:hidden px-2 sm:px-0 space-y-3">
+
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+                <span className="text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-200">Production Details</span>
+                <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400">internal</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-2.5 px-4 py-3 text-[12px]">
+                {meta.orderNumber  && <InvStat label="Order #"   value={meta.orderNumber} mono />}
+                {meta.orderType    && <InvStat label="Type"      value={meta.orderType} />}
+                {meta.salesRep     && <InvStat label="Sales Rep" value={meta.salesRep} />}
+                {meta.paymentStatus && <InvStat label="Payment"  value={`${meta.paymentStatus}${meta.paymentStatus === "Deposit Required" && meta.depositPercent != null ? ` (${meta.depositPercent}%)` : ""}`} />}
+                {meta.deliveryMethod && <InvStat label="Delivery" value={meta.deliveryMethod} capitalize />}
+                {meta.rushOrder && (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-rose-500">Rush Order</span>
+                    <span className="text-[12px] font-black text-rose-500">⚡ +15%</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {(meta.printMethod || (meta.printLocations?.length ?? 0) > 0 || meta.numColors || meta.printNotes) && (
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+                <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-800">
+                  <span className="text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-200">Print Specifications</span>
+                </div>
+                <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-[12px]">
+                  {meta.printMethod && <InvStat label="Method" value={meta.printMethod} />}
+                  {meta.numColors != null && <InvStat label="Colors" value={String(meta.numColors)} />}
+                  {(meta.printLocations?.length ?? 0) > 0 && (
+                    <div className="sm:col-span-3 flex flex-col gap-1">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Locations ({meta.printLocations!.length})</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {meta.printLocations!.map(loc => (
+                          <span key={loc} className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">{loc}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {meta.printNotes && (
+                    <div className="sm:col-span-3 flex flex-col gap-1">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Notes</span>
+                      <p className="text-[12px] text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-snug">{meta.printNotes}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {(meta.specialInstructions || meta.packagingNotes || meta.qcNotes) && (
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+                <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-800">
+                  <span className="text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-200">Production Notes</span>
+                </div>
+                <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-[12px]">
+                  {meta.specialInstructions && <InvNote label="Special Instructions" value={meta.specialInstructions} />}
+                  {meta.packagingNotes      && <InvNote label="Packaging Notes"      value={meta.packagingNotes} />}
+                  {meta.qcNotes             && <InvNote label="QC Notes"             value={meta.qcNotes} />}
+                </div>
+              </div>
+            )}
+
+            {(meta.files?.length ?? 0) > 0 && (
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+                <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                  <span className="text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-200">Artwork Files</span>
+                  <span className="text-[10px] font-bold text-slate-500">
+                    {meta.files!.filter(f => f.status === "print-ready").length} ready · {meta.files!.filter(f => f.status === "awaiting-approval").length} pending
+                  </span>
+                </div>
+                <ul className="px-4 py-3 flex flex-col gap-1.5">
+                  {meta.files!.map((f, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2 text-[12px]">
+                      <a href={f.url} target="_blank" rel="noopener noreferrer" className="font-bold text-slate-800 dark:text-slate-200 hover:text-sky-600 truncate flex items-center gap-2">
+                        <span>{f.isImage ? "🖼️" : "📄"}</span>
+                        <span className="truncate">{f.name}</span>
+                      </a>
+                      <span className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded shrink-0 ${
+                        f.status === "print-ready"
+                          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                          : "bg-amber-500/15 text-amber-700 dark:text-amber-400"
+                      }`}>
+                        {f.status === "print-ready" ? "✓ Ready" : "⏳ Pending"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {totalSteps > 0 && (
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+                <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                  <span className="text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-200">Workflow</span>
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${completedSteps > 0 ? "text-emerald-500" : "text-slate-500"}`}>
+                    {completedSteps} of {totalSteps}
+                  </span>
+                </div>
+                <div className="h-1.5 bg-slate-100 dark:bg-black/40">
+                  <div className="h-full bg-gradient-to-r from-sky-500 to-emerald-500 transition-all" style={{ width: `${(completedSteps / totalSteps) * 100}%` }} />
+                </div>
+                <div className="px-4 py-3 flex items-start gap-2 overflow-x-auto">
+                  {meta.workflowSteps!.map((s, i) => {
+                    const done = !!s.completedAt;
+                    const next = !done && (i === 0 || !!meta.workflowSteps![i - 1].completedAt);
+                    return (
+                      <div key={s.id} className="flex flex-col items-center gap-1 min-w-[90px]">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black border-2 ${
+                          done ? "bg-emerald-500 text-white border-emerald-400" :
+                          next ? "bg-sky-500 text-white border-sky-400" :
+                          "bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-400"
+                        }`}>{done ? "✓" : i + 1}</div>
+                        <span className={`text-[9px] font-black uppercase tracking-widest text-center leading-tight ${
+                          done ? "text-emerald-500" : next ? "text-sky-500" : "text-slate-500"
+                        }`}>{s.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* DYNAMIC SCALING WRAPPER FOR MOBILE */}
       <div className="w-full flex justify-center pb-8 print:pb-0 overflow-hidden print:overflow-visible origin-top print:!scale-100 print:!transform-none">
         
@@ -515,7 +671,7 @@ export default function ProfessionalPrintableInvoice() {
               <div className="text-right flex flex-col items-end gap-1.5">
                 <h2 className="bg-black text-white px-5 py-1.5 text-xl font-black uppercase tracking-tighter italic shadow-sm rounded-sm">Invoice #{invoice.jobs?.[0]?.job_number || "TBD"}</h2>
                 <div className="text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-sm shadow-sm border border-sky-400 text-sky-600 bg-sky-50">
-                  REF: {invoice.id?.split('-')[0]?.toUpperCase()}
+                  REF: {meta?.orderNumber || invoice.id?.split('-')[0]?.toUpperCase()}
                 </div>
                 <div className={`text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-sm border shadow-sm ${balanceDue <= 0.01 ? 'border-emerald-500 text-emerald-700 bg-emerald-50' : 'border-amber-400 text-amber-700 bg-amber-50'}`}>
                   {balanceDue <= 0.01 ? '✓ STATUS: PAID' : '⚠ STATUS: UNPAID'}
@@ -718,10 +874,51 @@ export default function ProfessionalPrintableInvoice() {
               {/* FINANCIALS PANEL */}
               <div className="w-[260px] bg-slate-50 p-5 border border-slate-200 rounded-lg shadow-sm">
                 <div className="space-y-3 text-[10px] font-black text-black uppercase tracking-widest">
-                  <div className="flex justify-between items-center text-slate-500">
-                    <span>Sub-Total</span>
-                    <span>${subtotal.toFixed(2)}</span>
-                  </div>
+                  {/* Per-line breakdown when v2 metadata is present.
+                      Falls back to a single Sub-Total row otherwise. */}
+                  {meta?.pricing && (meta.pricing.subtotal != null || meta.pricing.setupFees || meta.pricing.addOnCharges || meta.pricing.rushFee || meta.pricing.shippingFee) ? (
+                    <>
+                      {meta.pricing.subtotal != null && (
+                        <div className="flex justify-between items-center text-slate-500">
+                          <span>Line Items</span>
+                          <span>${meta.pricing.subtotal.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {(meta.pricing.setupFees ?? 0) > 0 && (
+                        <div className="flex justify-between items-center text-slate-500">
+                          <span>Setup Fees</span>
+                          <span>${meta.pricing.setupFees!.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {(meta.pricing.addOnCharges ?? 0) > 0 && (
+                        <div className="flex justify-between items-center text-slate-500">
+                          <span>Add-ons</span>
+                          <span>${meta.pricing.addOnCharges!.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {(meta.pricing.rushFee ?? 0) > 0 && (
+                        <div className="flex justify-between items-center text-rose-600 bg-rose-50 px-2 py-1 rounded">
+                          <span>⚡ Rush Fee (15%)</span>
+                          <span>${meta.pricing.rushFee!.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {(meta.pricing.shippingFee ?? 0) > 0 && (
+                        <div className="flex justify-between items-center text-slate-500">
+                          <span>Shipping</span>
+                          <span>${meta.pricing.shippingFee!.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center text-slate-700 border-t border-slate-200 pt-2">
+                        <span>Sub-Total</span>
+                        <span>${subtotal.toFixed(2)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between items-center text-slate-500">
+                      <span>Sub-Total</span>
+                      <span>${subtotal.toFixed(2)}</span>
+                    </div>
+                  )}
                   {totalSavings > 0 && (
                     <div className="flex justify-between items-center text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
                       <span>Discount</span>

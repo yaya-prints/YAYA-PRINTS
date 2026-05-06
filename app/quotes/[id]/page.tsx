@@ -450,10 +450,16 @@ export default function ProfessionalQuotePage() {
   if (!quote) return <div className="p-10 text-slate-900 dark:text-white bg-slate-100 dark:bg-[#0f1115] flex justify-center items-center h-screen font-black uppercase tracking-widest">Generating Quote...</div>;
 
   // --- FINANCIAL MATH ---
-  const subtotal = quote.total_amount || 0;
-  const tax = includeHst ? subtotal * 0.13 : 0;
-  const grandTotal = subtotal + tax;
+  // Pull v2 metadata once — if absent (legacy quote), we fall back to the
+  // single-line Sub-Total view. If present, we break the pre-tax total down
+  // into its parts (line items + setup + add-ons + rush + shipping).
+  const meta = parseYayaMeta(quote.internal_notes);
+  const preTaxTotal = quote.total_amount || 0;
+  const tax = includeHst ? preTaxTotal * 0.13 : 0;
+  const grandTotal = preTaxTotal + tax;
   const deposit = grandTotal * (depositPct / 100);
+  // Legacy alias — older code paths read `subtotal` as the pre-tax figure.
+  const subtotal = preTaxTotal;
 
   const totalSavings = quote.quote_items?.reduce((itemSum: number, item: any) => {
     if (isGeneralItem(item)) return itemSum;
@@ -821,7 +827,7 @@ export default function ProfessionalQuotePage() {
               <div className="text-right flex flex-col items-end gap-1.5">
                 <h2 className="bg-black text-white px-5 py-1.5 text-xl font-black uppercase tracking-tighter italic shadow-sm rounded-sm">Quote</h2>
                 <div className="text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-sm shadow-sm border border-sky-400 text-sky-600 bg-sky-50">
-                  REF: {quote.id.split('-')[0].toUpperCase()}
+                  REF: {meta?.orderNumber || quote.id.split('-')[0].toUpperCase()}
                 </div>
 
                 {/* VALIDITY BADGE */}
@@ -1033,10 +1039,52 @@ export default function ProfessionalQuotePage() {
               {/* FINANCIALS PANEL */}
               <div className="w-[280px] bg-slate-50 p-5 border border-slate-200 rounded-lg shadow-sm">
                 <div className="space-y-3 text-[10px] font-black text-black uppercase tracking-widest">
-                  <div className="flex justify-between items-center text-slate-500">
-                    <span>Sub-Total</span>
-                    <span>${subtotal.toFixed(2)}</span>
-                  </div>
+                  {/* Breakdown rows — only when v2 metadata is present and has
+                      pricing details. Otherwise the legacy single Sub-Total
+                      row stands alone. */}
+                  {meta?.pricing && (meta.pricing.subtotal != null || meta.pricing.setupFees || meta.pricing.addOnCharges || meta.pricing.rushFee || meta.pricing.shippingFee) ? (
+                    <>
+                      {meta.pricing.subtotal != null && (
+                        <div className="flex justify-between items-center text-slate-500">
+                          <span>Line Items</span>
+                          <span>${meta.pricing.subtotal.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {(meta.pricing.setupFees ?? 0) > 0 && (
+                        <div className="flex justify-between items-center text-slate-500">
+                          <span>Setup Fees</span>
+                          <span>${meta.pricing.setupFees!.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {(meta.pricing.addOnCharges ?? 0) > 0 && (
+                        <div className="flex justify-between items-center text-slate-500">
+                          <span>Add-ons</span>
+                          <span>${meta.pricing.addOnCharges!.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {(meta.pricing.rushFee ?? 0) > 0 && (
+                        <div className="flex justify-between items-center text-rose-600 bg-rose-50 px-2 py-1 rounded">
+                          <span>⚡ Rush Fee (15%)</span>
+                          <span>${meta.pricing.rushFee!.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {(meta.pricing.shippingFee ?? 0) > 0 && (
+                        <div className="flex justify-between items-center text-slate-500">
+                          <span>Shipping</span>
+                          <span>${meta.pricing.shippingFee!.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center text-slate-700 border-t border-slate-200 pt-2">
+                        <span>Sub-Total</span>
+                        <span>${subtotal.toFixed(2)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between items-center text-slate-500">
+                      <span>Sub-Total</span>
+                      <span>${subtotal.toFixed(2)}</span>
+                    </div>
+                  )}
                   {totalSavings > 0 && (
                     <div className="flex justify-between items-center text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
                       <span>You Save</span>
