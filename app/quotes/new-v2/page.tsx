@@ -372,10 +372,162 @@ export default function CreateNewOrderV2() {
   const inputCls = `w-full rounded-md border px-3 py-2 text-[13px] font-medium outline-none transition-colors focus:border-sky-500 ${t.inputBg}`;
   const inputSm  = `w-full rounded-md border px-2.5 py-1.5 text-[12px] font-medium outline-none transition-colors focus:border-sky-500 ${t.inputBg}`;
 
-  // ---- SAVE STUBS (Phase 6 will wire them up) -------------------------------
-  const saveDraft = () => alert("Save Draft will be wired in Phase 6.");
-  const sendQuote = () => alert("Send Quote will be wired in Phase 6.");
-  const createOrder = () => alert("Create Order will be wired in Phase 6.");
+  // ---- SAVE LOGIC (Phase 6) ------------------------------------------------
+  // We persist into the existing schema (customers, quotes, quote_items,
+  // quote_item_variants, jobs). Fields that don't have DB columns
+  // (rush flag, print specs, delivery method, internal notes, file list,
+  // workflow state) are flattened into a structured text block that lands
+  // in `quotes.internal_notes` — readable, queryable with `LIKE`, and no
+  // migration required for now. If we later add real columns we can
+  // re-parse this block into them.
+  const [saving, setSaving] = useState(false);
+
+  const buildNotesBlock = () => {
+    const lines: string[] = [];
+    lines.push("══════════════════════════════════════════════");
+    lines.push(`ORDER #${orderNumber}`);
+    lines.push("══════════════════════════════════════════════");
+    lines.push(`Order Type: ${orderType}`);
+    lines.push(`Sales Rep: ${salesRep}`);
+    lines.push(`Payment: ${paymentStatus}${paymentStatus === "Deposit Required" ? ` (${depositPercent}%)` : ""}`);
+    lines.push(`Delivery: ${deliveryMethod}`);
+    if (rushOrder) lines.push("⚡ RUSH ORDER (+15%)");
+    lines.push("");
+    lines.push("── PRINT SPECS ──");
+    lines.push(`Method: ${printMethod}`);
+    lines.push(`Locations: ${printLocations.join(", ") || "—"}`);
+    lines.push(`Colors: ${numColors}`);
+    if (printNotes) lines.push(`Notes: ${printNotes}`);
+    lines.push("");
+    lines.push("── FINANCIAL ──");
+    lines.push(`Subtotal: $${subtotal.toFixed(2)}`);
+    if (setupFees > 0)    lines.push(`Setup Fees: $${setupFees.toFixed(2)}`);
+    if (addOnCharges > 0) lines.push(`Add-ons: $${addOnCharges.toFixed(2)}`);
+    if (rushOrder)        lines.push(`Rush Fee: $${rushFee.toFixed(2)}`);
+    if (shippingFee > 0)  lines.push(`Shipping: $${shippingFee.toFixed(2)}`);
+    lines.push(`Tax (${taxRate}%): $${taxAmount.toFixed(2)}`);
+    lines.push(`GRAND TOTAL: $${grandTotal.toFixed(2)}`);
+    if (paymentStatus === "Deposit Required") lines.push(`Deposit Owed: $${depositAmount.toFixed(2)}`);
+    lines.push("");
+    if (specialInstructions) { lines.push("── SPECIAL INSTRUCTIONS ──"); lines.push(specialInstructions); lines.push(""); }
+    if (packagingNotes)      { lines.push("── PACKAGING NOTES ──");      lines.push(packagingNotes);      lines.push(""); }
+    if (qcNotes)             { lines.push("── QC NOTES ──");             lines.push(qcNotes);             lines.push(""); }
+    if (files.length > 0) {
+      lines.push("── ARTWORK FILES ──");
+      files.forEach(f => lines.push(`• ${f.name} [${f.status === "print-ready" ? "✓ PRINT READY" : "⏳ AWAITING APPROVAL"}]: ${f.url}`));
+    }
+    return lines.join("\n");
+  };
+
+  const save = async (status: "Draft" | "Sent" | "Approved") => {
+    // Basic validation
+    if (!selectedCustomerId && !companyName.trim()) {
+      alert("Please select an existing customer or enter a company name.");
+      return;
+    }
+    const validLines = lines.filter(l => l.description.trim() && lineQty(l) > 0);
+    if (status === "Approved" && validLines.length === 0) {
+      alert("Please add at least one product with sizes before creating the order.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // 1. Get or create customer
+      let customerId = selectedCustomerId;
+      if (!customerId) {
+        const { data: newCust, error: cErr } = await supabase
+          .from("customers")
+          .insert([{
+            company_name: companyName.trim() || contactName.trim(),
+            contact_name: contactName.trim() || null,
+            email: email.trim() || null,
+            phone: phone.trim() || null,
+            address: billingAddress.trim() || null,
+            lead_status: status === "Approved" ? "Active VIP" : "Quoting",
+            lead_source: "New Order V2",
+            vip_tier: customerType === "vip" ? "VIP" : "Standard",
+            discount_percent: 0,
+            portal_pin: Math.floor(1000 + Math.random() * 9000).toString(),
+          }])
+          .select()
+          .single();
+        if (cErr) throw cErr;
+        customerId = newCust.id;
+      }
+
+      // 2. Insert quote
+      const { data: quote, error: qErr } = await supabase
+        .from("quotes")
+        .insert([{
+          customer_id: customerId,
+          total_amount: grandTotal,
+          status,
+          internal_notes: buildNotesBlock(),
+        }])
+        .select()
+        .single();
+      if (qErr) throw qErr;
+
+      // 3. Group lines by description, write quote_items + variants
+      const grouped: Record<string, LineItem[]> = {};
+      validLines.forEach(l => {
+        if (!grouped[l.description]) grouped[l.description] = [];
+        grouped[l.description].push(l);
+      });
+
+      for (const [desc, group] of Object.entries(grouped)) {
+        const totalQty = group.reduce((s, l) => s + lineQty(l), 0);
+        const { data: qItem, error: iErr } = await supabase
+          .from("quote_items")
+          .insert([{
+            quote_id: quote.id,
+            description: desc,
+            quantity: totalQty,
+            unit_price: group[0].unit_price,
+          }])
+          .select()
+          .single();
+        if (iErr) throw iErr;
+
+        const variants = group.map(l => ({
+          quote_item_id: qItem.id,
+          color: l.color,
+          regular_price: l.regular_price,
+          unit_price: l.unit_price,
+          xs: l.xs, s: l.s, m: l.m, l: l.l, xl: l.xl,
+          xxl: l.xxl, xxxl: l.xxxl, xxxxl: l.xxxxl, xxxxxl: l.xxxxxl,
+        }));
+        const { error: vErr } = await supabase.from("quote_item_variants").insert(variants);
+        if (vErr) throw vErr;
+      }
+
+      // 4. If approved, also dispatch a job to the production board
+      if (status === "Approved") {
+        const numFromOrder = parseInt(orderNumber.replace(/\D/g, "").slice(-4));
+        const jobNum = !Number.isNaN(numFromOrder) && numFromOrder > 0 ? numFromOrder : Math.floor(1000 + Math.random() * 9000);
+        await supabase.from("jobs").insert([{
+          quote_id: quote.id,
+          job_number: jobNum,
+          title: `${totalUnits}x ${orderType.toUpperCase()}`,
+          stage: "Incoming",
+          due_date: dueDate || null,
+          attachment_url: files[0]?.url || null,
+        }]);
+      }
+
+      // Done — bounce to the list view so the user sees it.
+      router.push(status === "Approved" ? "/jobs" : "/quotes");
+      router.refresh();
+    } catch (err: any) {
+      alert("Save failed: " + err.message);
+      setSaving(false);
+    }
+  };
+
+  const saveDraft   = () => save("Draft");
+  const sendQuote   = () => save("Sent");
+  const createOrder = () => save("Approved");
 
   return (
     <div className={`${t.pageBg} ${t.text} min-h-screen transition-colors duration-300`}>
@@ -390,17 +542,17 @@ export default function CreateNewOrderV2() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={saveDraft} className={`${t.secondaryBtn} px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 min-h-[40px] active:scale-95 transition-all`}>
+            <button disabled={saving} onClick={saveDraft} className={`${t.secondaryBtn} px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 min-h-[40px] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-wait`}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-              Save Draft
+              {saving ? "Saving…" : "Save Draft"}
             </button>
-            <button onClick={sendQuote} className={`${t.secondaryBtn} px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 min-h-[40px] active:scale-95 transition-all`}>
+            <button disabled={saving} onClick={sendQuote} className={`${t.secondaryBtn} px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 min-h-[40px] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-wait`}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              Send Quote
+              {saving ? "Sending…" : "Send Quote"}
             </button>
-            <button onClick={createOrder} className={`${t.primaryBtn} px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 min-h-[40px] active:scale-95 transition-all`}>
+            <button disabled={saving} onClick={createOrder} className={`${t.primaryBtn} px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 min-h-[40px] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-wait`}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
-              Create Order
+              {saving ? "Creating…" : "Create Order"}
             </button>
           </div>
         </div>
