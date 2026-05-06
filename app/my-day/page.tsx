@@ -1544,11 +1544,11 @@ export default function MyDayPage() {
         </div>
       </div>
 
-      {/* ─── MAIN GRID ──────────────────────────────────────────────────────── */}
-      <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* ─── MAIN GRID — 4-column on xl: Tools | Calendar | Agenda | Details ─ */}
+      <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-5">
 
-        {/* ─── LEFT RAIL: TABS (POOL / PRIORITY) ──────────────────────────── */}
-        <div className="lg:col-span-4 space-y-5">
+        {/* ─── COL 1 · LEFT RAIL: POOL / PRIORITY / STATS / NOTES ─────────── */}
+        <div className="lg:col-span-4 xl:col-span-3 space-y-5">
 
           {/* Tab strip */}
           <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 rounded-xl p-1">
@@ -1641,8 +1641,8 @@ export default function MyDayPage() {
           </div>
         </div>
 
-        {/* ─── CENTER: TIMELINE ───────────────────────────────────────────── */}
-        <div className="lg:col-span-8">
+        {/* ─── COL 2 · CALENDAR (timeline) ────────────────────────────────── */}
+        <div className="lg:col-span-8 xl:col-span-5">
           <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 md:p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4 gap-3">
               <div className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">Schedule</div>
@@ -1693,6 +1693,29 @@ export default function MyDayPage() {
               }}
             />
           </div>
+        </div>
+
+        {/* ─── COL 3 · TODAY'S AGENDA / DEADLINES / TEAM / MACHINES ─────── */}
+        <div className="hidden xl:flex xl:col-span-2 flex-col gap-4 min-w-0">
+          <PanelShell title="Today's Agenda" badge={String(scheduledTasks.length)}>
+            <div className="text-[11px] text-slate-400 dark:text-slate-500">Phase C — coming up next</div>
+          </PanelShell>
+          <PanelShell title="Urgent Deadlines" badge={String(rushJobsCount)} accent="rose">
+            <div className="text-[11px] text-slate-400 dark:text-slate-500">Phase C</div>
+          </PanelShell>
+          <PanelShell title="Team Availability">
+            <div className="text-[11px] text-slate-400 dark:text-slate-500">Phase E</div>
+          </PanelShell>
+          <PanelShell title="Machine Schedule">
+            <div className="text-[11px] text-slate-400 dark:text-slate-500">Phase E</div>
+          </PanelShell>
+        </div>
+
+        {/* ─── COL 4 · SELECTED JOB DETAILS ──────────────────────────────── */}
+        <div className="hidden xl:flex xl:col-span-2 flex-col gap-4 min-w-0">
+          <PanelShell title="Selected Job Details">
+            <div className="text-[11px] text-slate-400 dark:text-slate-500">Phase D — click any calendar card to see job details here.</div>
+          </PanelShell>
         </div>
       </div>
 
@@ -4066,6 +4089,31 @@ function BottomStatCard({ label, value, sublabel, icon, alert }: {
       <div className={`shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-xl ${alert ? "bg-red-500/10 text-red-500" : "bg-slate-100 dark:bg-slate-800 text-slate-400"}`}>
         {icon}
       </div>
+    </div>
+  );
+}
+
+// Generic right-side panel container — used by Today's Agenda, Urgent
+// Deadlines, Team Availability, Machine Schedule, and Selected Job Details.
+function PanelShell({ title, badge, accent, children }: {
+  title: string;
+  badge?: string;
+  accent?: "rose" | "sky" | "emerald";
+  children: React.ReactNode;
+}) {
+  const badgeCls = accent === "rose"    ? "bg-rose-500/15 text-rose-500"
+                 : accent === "sky"     ? "bg-sky-500/15 text-sky-500"
+                 : accent === "emerald" ? "bg-emerald-500/15 text-emerald-500"
+                                        : "bg-slate-100 dark:bg-slate-800 text-slate-500";
+  return (
+    <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden">
+      <header className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-slate-200 dark:border-slate-800">
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-700 dark:text-slate-300 truncate">{title}</span>
+        {badge != null && (
+          <span className={`text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md ${badgeCls}`}>{badge}</span>
+        )}
+      </header>
+      <div className="p-4">{children}</div>
     </div>
   );
 }
