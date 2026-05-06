@@ -1376,6 +1376,45 @@ export default function MyDayPage() {
   const progressPct = totalToday > 0 ? Math.round((completedToday / totalToday) * 100) : 0;
   const isToday = selectedDate === todayISO();
 
+  // ─── KPI DERIVED VALUES (top + bottom strips) ─────────────────────────────
+  const scheduledHrs = useMemo(
+    () => Math.round(tasks.filter(t => t.target_time).reduce((s, t) => s + (t.duration_minutes || 0), 0) / 6) / 10,
+    [tasks]
+  );
+  const remainingHrs = useMemo(
+    () => Math.round(tasks.filter(t => t.target_time && !t.is_completed).reduce((s, t) => s + (t.duration_minutes || 0), 0) / 6) / 10,
+    [tasks]
+  );
+  const rushJobsCount = useMemo(
+    () => tasks.filter(t => !t.is_completed && (t.priority === "urgent" || t.priority === "high")).length,
+    [tasks]
+  );
+  const pickupsTodayCount = useMemo(
+    () => tasks.filter(t => !t.is_completed && (t.category === "delivery" || /pickup|deliver/i.test(t.title || ""))).length,
+    [tasks]
+  );
+  const overdueItemsCount = useMemo(() => {
+    if (!isToday) return 0;
+    const nowMins = (() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); })();
+    return tasks.filter(t => {
+      if (t.is_completed || !t.target_time) return false;
+      const m = minsFromTime(t.target_time);
+      return m + (t.duration_minutes || 0) < nowMins;
+    }).length;
+  }, [tasks, isToday]);
+  const utilizationPct = useMemo(() => {
+    const cap = 8; // 8h workday
+    return Math.min(100, Math.round((scheduledHrs / cap) * 100));
+  }, [scheduledHrs]);
+  const pickupsTodayDelivery = useMemo(
+    () => tasks.filter(t => !t.is_completed && /pickup/i.test(t.title || "")).length,
+    [tasks]
+  );
+  const deliveriesTodayCount = useMemo(
+    () => tasks.filter(t => !t.is_completed && /deliver/i.test(t.title || "")).length,
+    [tasks]
+  );
+
   // ─── VOICE CAPTURE ────────────────────────────────────────────────────────────
   const recognitionRef = useRef<any>(null);
   const startVoiceCapture = () => {
@@ -1476,6 +1515,32 @@ export default function MyDayPage() {
             </div>
             <span className="text-emerald-500">{progressPct}%</span>
           </div>
+        </div>
+      </div>
+
+      {/* ─── TOP KPI STRIP — 7 cards ──────────────────────────────────────── */}
+      <div className="max-w-[1600px] mx-auto px-4 md:px-6 pt-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+          <KpiCard
+            label="Daily Completion"
+            valueNode={
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">{progressPct}%</span>
+                  <span className="text-[10px]">✨</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-emerald-500 to-sky-500" style={{ width: `${progressPct}%` }} />
+                </div>
+              </div>
+            }
+          />
+          <KpiCard label="Tasks Completed" value={String(completedToday)} icon="✓" iconBg="bg-emerald-500/15 text-emerald-500" />
+          <KpiCard label="Scheduled Hrs"   value={scheduledHrs.toFixed(1)} icon="⏰" iconBg="bg-sky-500/15 text-sky-500" />
+          <KpiCard label="Remaining Hrs"   value={remainingHrs.toFixed(1)} icon="⏱" iconBg="bg-violet-500/15 text-violet-500" />
+          <KpiCard label="Rush Jobs"       value={String(rushJobsCount)} icon="🔥" iconBg="bg-rose-500/15 text-rose-500" />
+          <KpiCard label="Pickups Today"   value={String(pickupsTodayCount)} icon="🚚" iconBg="bg-amber-500/15 text-amber-500" />
+          <KpiCard label="Overdue Items"   value={String(overdueItemsCount)} icon="⚠" iconBg="bg-red-500/15 text-red-500" alert={overdueItemsCount > 0} />
         </div>
       </div>
 
@@ -1698,6 +1763,18 @@ export default function MyDayPage() {
       )}
 
       {/* ─── QR CODE MODAL ──────────────────────────────────────────────── */}
+      {/* ─── BOTTOM STATS STRIP — 6 cards ─────────────────────────────────── */}
+      <div className="max-w-[1600px] mx-auto px-4 md:px-6 pb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <BottomStatCard label="Total Scheduled Jobs" value={String(scheduledTasks.length)} sublabel="Today" icon="📋" />
+          <BottomStatCard label="Production Hours"     value={scheduledHrs.toFixed(1)}        sublabel="Scheduled" icon="🕒" />
+          <BottomStatCard label="Pickups Today"        value={String(pickupsTodayDelivery)}   sublabel="Scheduled" icon="🚚" />
+          <BottomStatCard label="Deliveries Today"     value={String(deliveriesTodayCount)}   sublabel="Scheduled" icon="📦" />
+          <BottomStatCard label="Overdue Tasks"        value={String(overdueItemsCount)}      sublabel={overdueItemsCount > 0 ? "Needs Attention" : "All Clear"} icon="⚠" alert={overdueItemsCount > 0} />
+          <BottomStatCard label="Utilization"          value={`${utilizationPct}%`}            sublabel={utilizationPct < 90 ? "On Track" : "Heavy Load"} icon="📈" />
+        </div>
+      </div>
+
       {qrTask && (
         <QRTaskModal task={qrTask} onClose={() => setQrTask(null)} />
       )}
@@ -3940,6 +4017,54 @@ function ShopModeCard({ task, isCurrent, onToggle, onStart, onBumpItem, onShowQR
             ▦
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── KPI HELPERS (top + bottom strips) ────────────────────────────────────
+// Defined at module scope so they don't get re-created every render of
+// MyDayPage (which would otherwise lose focus on inputs etc.).
+
+function KpiCard({ label, value, valueNode, icon, iconBg, alert }: {
+  label: string;
+  value?: string;
+  valueNode?: React.ReactNode;
+  icon?: string;
+  iconBg?: string;
+  alert?: boolean;
+}) {
+  return (
+    <div className={`bg-white dark:bg-slate-950 border ${alert ? "border-red-300 dark:border-red-500/40" : "border-slate-200 dark:border-slate-800"} rounded-xl p-3.5 shadow-sm flex items-center gap-3`}>
+      {icon && (
+        <div className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-base ${iconBg ?? "bg-slate-100 dark:bg-slate-800 text-slate-500"}`}>
+          {icon}
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        {valueNode ?? <div className="text-2xl font-black tracking-tight text-slate-900 dark:text-white truncate">{value}</div>}
+        <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mt-0.5 truncate">{label}</div>
+      </div>
+    </div>
+  );
+}
+
+function BottomStatCard({ label, value, sublabel, icon, alert }: {
+  label: string;
+  value: string;
+  sublabel: string;
+  icon: string;
+  alert?: boolean;
+}) {
+  return (
+    <div className={`bg-white dark:bg-slate-950 border ${alert ? "border-red-300 dark:border-red-500/40" : "border-slate-200 dark:border-slate-800"} rounded-xl p-4 shadow-sm flex items-center justify-between gap-3`}>
+      <div className="flex-1 min-w-0">
+        <div className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-1.5 truncate">{label}</div>
+        <div className={`text-3xl font-black tracking-tight leading-none ${alert ? "text-red-500" : "text-slate-900 dark:text-white"}`}>{value}</div>
+        <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mt-1.5 truncate">{sublabel}</div>
+      </div>
+      <div className={`shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-xl ${alert ? "bg-red-500/10 text-red-500" : "bg-slate-100 dark:bg-slate-800 text-slate-400"}`}>
+        {icon}
       </div>
     </div>
   );
