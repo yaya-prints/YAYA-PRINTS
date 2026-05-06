@@ -636,6 +636,19 @@ export default function MyDayPage() {
   // Drag state — null means nothing dragging; otherwise this is the job being dragged
   const [draggingJob, setDraggingJob] = useState<any | null>(null);
   const [dropHint, setDropHint] = useState<{ kind: "time" | "pool"; time?: string } | null>(null);
+  // When the user grabs an already-scheduled task to move it. Tracked here
+  // (rather than via dataTransfer) so the drop preview can read it during
+  // dragOver. Cleared in dragEnd / drop handlers.
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  // Timeline view: hourly calendar grid vs. flat list. Persisted so the
+  // user's choice survives reloads.
+  const [timelineView, setTimelineView] = useState<"calendar" | "list">(() => {
+    if (typeof window === "undefined") return "calendar";
+    return (localStorage.getItem("yaya-myday-view") as "calendar" | "list") || "calendar";
+  });
+  useEffect(() => {
+    try { localStorage.setItem("yaya-myday-view", timelineView); } catch {}
+  }, [timelineView]);
 
   // Shop mode (full-screen big-button view of today's scheduled tasks)
   const [shopMode, setShopMode] = useState(false);
@@ -1566,22 +1579,52 @@ export default function MyDayPage() {
         {/* ─── CENTER: TIMELINE ───────────────────────────────────────────── */}
         <div className="lg:col-span-8">
           <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 md:p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 gap-3">
               <div className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">Schedule</div>
-              <div className="text-[9px] font-black text-slate-400">{scheduledTasks.length} scheduled</div>
+              <div className="flex items-center gap-3">
+                {/* View toggle — calendar vs list */}
+                <div className="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-0.5">
+                  {([
+                    { id: "calendar", label: "Calendar" },
+                    { id: "list",     label: "List" },
+                  ] as const).map(opt => (
+                    <button
+                      key={opt.id}
+                      onClick={() => setTimelineView(opt.id)}
+                      className={`px-3 py-1 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors ${
+                        timelineView === opt.id
+                          ? "bg-white dark:bg-slate-950 text-slate-900 dark:text-white shadow-sm"
+                          : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="text-[9px] font-black text-slate-400">{scheduledTasks.length} scheduled</div>
+              </div>
             </div>
             <Timeline
+              view={timelineView}
               tasks={scheduledTasks}
               onToggle={toggleComplete}
               onEdit={setEditingTask}
               isToday={isToday}
               draggingJob={draggingJob}
+              draggingTaskId={draggingTaskId}
+              setDraggingTaskId={setDraggingTaskId}
               dropHint={dropHint}
               setDropHint={setDropHint}
               onDropJobAtTime={async (time) => {
                 if (!draggingJob) return;
                 const job = draggingJob; setDraggingJob(null); setDropHint(null);
                 await scheduleJobFromPicker(job, { date: selectedDate, time });
+              }}
+              onMoveTaskToTime={async (taskId, time) => {
+                const t = tasks.find(x => x.id === taskId);
+                if (!t) return;
+                if (t.target_time === time) return;
+                await updateTask(t, { target_time: time });
               }}
             />
           </div>
@@ -1754,13 +1797,25 @@ function TaskCard({ task, compact, onToggle, onEdit, onDelete }: {
   );
 }
 
-function Timeline({ tasks, onToggle, onEdit, isToday, draggingJob, dropHint, setDropHint, onDropJobAtTime }: {
+function Timeline({ view, tasks, onToggle, onEdit, isToday, draggingJob, draggingTaskId, setDraggingTaskId, dropHint, setDropHint, onDropJobAtTime, onMoveTaskToTime }: {
+  view: "calendar" | "list";
   tasks: Task[]; onToggle: (t: Task) => void; onEdit: (t: Task) => void; isToday: boolean;
   draggingJob?: any | null;
+  draggingTaskId?: string | null;
+  setDraggingTaskId?: (id: string | null) => void;
   dropHint?: { kind: "time" | "pool"; time?: string } | null;
   setDropHint?: (h: { kind: "time" | "pool"; time?: string } | null) => void;
   onDropJobAtTime?: (time: string) => void;
+  onMoveTaskToTime?: (taskId: string, time: string) => void;
 }) {
+  // Render the list-view variant when requested. Falls through to the
+  // calendar grid below otherwise.
+  if (view === "list") {
+    return (
+      <TimelineListView tasks={tasks} onToggle={onToggle} onEdit={onEdit} />
+    );
+  }
+
   const hours = [];
   for (let h = TIMELINE_START_HOUR; h <= TIMELINE_END_HOUR; h++) hours.push(h);
 
@@ -1830,16 +1885,16 @@ function Timeline({ tasks, onToggle, onEdit, isToday, draggingJob, dropHint, set
   return (
     <div
       ref={gridRef}
-      className={`relative transition-colors ${draggingJob ? "ring-2 ring-orange-500/40 ring-inset rounded-lg" : ""}`}
+      className={`relative transition-colors ${(draggingJob || draggingTaskId) ? "ring-2 ring-orange-500/40 ring-inset rounded-lg" : ""}`}
       style={{ height: (TIMELINE_END_HOUR - TIMELINE_START_HOUR + 1) * PIXELS_PER_HOUR }}
       onDragOver={(e) => {
-        if (!draggingJob) return;
+        if (!draggingJob && !draggingTaskId) return;
         e.preventDefault();
         const t = yToSnappedTime(e.clientY);
         if (t) setDropHint?.({ kind: "time", time: t });
       }}
       onDragLeave={(e) => {
-        if (!draggingJob) return;
+        if (!draggingJob && !draggingTaskId) return;
         // Only clear if leaving the grid entirely
         const rect = gridRef.current?.getBoundingClientRect();
         if (rect && (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom)) {
@@ -1847,10 +1902,18 @@ function Timeline({ tasks, onToggle, onEdit, isToday, draggingJob, dropHint, set
         }
       }}
       onDrop={(e) => {
-        if (!draggingJob) return;
         e.preventDefault();
         const t = yToSnappedTime(e.clientY);
-        if (t) onDropJobAtTime?.(t);
+        if (!t) return;
+        // A job from the picker takes precedence; otherwise this is an
+        // existing task being repositioned to a new time.
+        if (draggingJob) {
+          onDropJobAtTime?.(t);
+        } else if (draggingTaskId) {
+          onMoveTaskToTime?.(draggingTaskId, t);
+          setDraggingTaskId?.(null);
+          setDropHint?.(null);
+        }
       }}
     >
       {/* Drop preview line */}
@@ -1907,12 +1970,21 @@ function Timeline({ tasks, onToggle, onEdit, isToday, draggingJob, dropHint, set
             else if (ratio < 0.85) actualBadge = { text: `−${Math.round((1 - ratio) * 100)}%`, color: "text-emerald-400" };
             else actualBadge = { text: "on time", color: "text-emerald-400" };
           }
+          const isDragging = draggingTaskId === t.id;
           return (
             <div key={t.id}
+              draggable={!t.is_completed}
+              onDragStart={(e) => {
+                if (t.is_completed) return;
+                setDraggingTaskId?.(t.id);
+                // dataTransfer makes the drag image render correctly on Safari
+                try { e.dataTransfer.setData("text/plain", t.id); e.dataTransfer.effectAllowed = "move"; } catch {}
+              }}
+              onDragEnd={() => { setDraggingTaskId?.(null); setDropHint?.(null); }}
               onClick={() => onEdit(t)}
               className={`absolute rounded-lg ${cls.bg} ${
                 t._conflict ? "ring-2 ring-red-500/70" : `ring-1 ${cls.ring}`
-              } cursor-pointer hover:scale-[1.01] transition-all overflow-hidden`}
+              } cursor-grab active:cursor-grabbing hover:scale-[1.01] transition-all overflow-hidden ${isDragging ? "opacity-40" : ""}`}
               style={{ top: t._top, height: t._height, left: `calc(${leftPct}% + 4px)`, width: `calc(${widthPct}% - 8px)` }}>
               <div className={`absolute left-0 top-0 bottom-0 w-1 ${cls.chip}`}></div>
               {t._conflict && (
@@ -1957,6 +2029,97 @@ function Timeline({ tasks, onToggle, onEdit, isToday, draggingJob, dropHint, set
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ─── TIMELINE — LIST VIEW ──────────────────────────────────────────────────
+// Buckets scheduled tasks into Now / Upcoming / Done. Cleaner than the
+// hourly grid when the user just wants to scan their day. No drag here —
+// users who want to reschedule should switch to Calendar view.
+function TimelineListView({ tasks, onToggle, onEdit }: {
+  tasks: Task[]; onToggle: (t: Task) => void; onEdit: (t: Task) => void;
+}) {
+  const now = new Date();
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+
+  const bucketed = useMemo(() => {
+    const sorted = [...tasks].sort((a, b) => minsFromTime(a.target_time) - minsFromTime(b.target_time));
+    const nowB: Task[] = [], upcomingB: Task[] = [], doneB: Task[] = [];
+    for (const t of sorted) {
+      if (t.is_completed) { doneB.push(t); continue; }
+      const start = minsFromTime(t.target_time);
+      const end = start + (t.duration_minutes || 30);
+      if (start <= nowMins && nowMins < end) nowB.push(t);
+      else upcomingB.push(t);
+    }
+    return { now: nowB, upcoming: upcomingB, done: doneB };
+  }, [tasks, nowMins]);
+
+  const renderBucket = (label: string, bucket: Task[], accent: "sky" | "slate" | "emerald") => {
+    if (bucket.length === 0) return null;
+    const accentCls = accent === "sky" ? "text-sky-500 border-sky-500/30 bg-sky-500/5"
+      : accent === "emerald" ? "text-emerald-500 border-emerald-500/30 bg-emerald-500/5"
+      : "text-slate-500 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40";
+    return (
+      <div className="mb-5 last:mb-0">
+        <div className="flex items-center gap-2 mb-2">
+          <div className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-[0.3em] border ${accentCls}`}>{label}</div>
+          <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800"></div>
+          <div className="text-[9px] font-black text-slate-400">{bucket.length}</div>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          {bucket.map(t => {
+            const cat = CATEGORIES.find(c => c.id === t.category) || CATEGORIES[0];
+            const cls = CATEGORY_CLASSES[cat.color];
+            const itemProgress = itemChecklistProgress(t.subtasks || []);
+            return (
+              <button
+                key={t.id}
+                onClick={() => onEdit(t)}
+                className={`w-full text-left flex items-center gap-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 hover:bg-slate-50 dark:hover:bg-slate-900 px-3 py-2.5 transition-colors group`}
+              >
+                <span onClick={(e) => { e.stopPropagation(); onToggle(t); }}
+                  className={`shrink-0 w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
+                    t.is_completed ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300 dark:border-slate-600 group-hover:border-emerald-400"
+                  }`}
+                >
+                  {t.is_completed && <span className="text-[9px] leading-none">✓</span>}
+                </span>
+                <div className={`shrink-0 w-1 self-stretch rounded-full ${cls.chip}`}></div>
+                <div className="flex-1 min-w-0">
+                  <div className={`text-[12px] font-black tracking-tight truncate ${t.is_completed ? "line-through text-slate-400" : "text-slate-900 dark:text-white"}`}>{t.title}</div>
+                  <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mt-0.5">
+                    <span>{fmt12hr(t.target_time)}</span>
+                    <span>·</span>
+                    <span>{t.duration_minutes}m</span>
+                    {t.jobs && <><span>·</span><span className="text-orange-500 normal-case tracking-tight">#{t.jobs.job_number}</span></>}
+                    {t.customers && <><span>·</span><span className="text-teal-500 normal-case tracking-tight truncate">{t.customers.company_name}</span></>}
+                    {itemProgress && <><span>·</span><span className="text-amber-500">☑ {itemProgress.done}/{itemProgress.total}</span></>}
+                    {t.started_at && !t.is_completed && <><span>·</span><span className="text-sky-500 animate-pulse">● running</span></>}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  if (tasks.length === 0) {
+    return (
+      <div className="text-center py-16 text-[10px] font-bold tracking-widest uppercase text-slate-300 dark:text-slate-700">
+        No scheduled tasks for this day
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {renderBucket("Now", bucketed.now, "sky")}
+      {renderBucket("Upcoming", bucketed.upcoming, "slate")}
+      {renderBucket("Done", bucketed.done, "emerald")}
     </div>
   );
 }
