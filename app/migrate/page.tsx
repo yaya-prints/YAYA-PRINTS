@@ -141,12 +141,12 @@ export default function JsonMigrationEngine() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0f1115] text-slate-900 dark:text-white p-6 md:p-12 font-sans transition-colors duration-300">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0f1115] text-slate-900 dark:text-white p-4 sm:p-6 md:p-12 font-sans transition-colors duration-300">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-black uppercase tracking-tighter mb-2 text-emerald-600 dark:text-emerald-500">JSON Data Importer</h1>
-        <p className="text-slate-500 dark:text-slate-400 font-bold mb-10 text-sm">Upload the <b>orders.json</b> file. This guarantees 100% data integrity.</p>
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-tighter mb-2 text-emerald-600 dark:text-emerald-500">JSON Data Importer</h1>
+        <p className="text-slate-500 dark:text-slate-400 font-bold mb-6 md:mb-10 text-sm">Upload the <b>orders.json</b> file. This guarantees 100% data integrity.</p>
 
-        <div className="w-full relative border-2 border-dashed border-emerald-400 dark:border-emerald-500/50 rounded-[2rem] p-10 bg-emerald-50 dark:bg-emerald-900/10 hover:bg-emerald-100 dark:hover:bg-emerald-900/20 transition-all text-center mb-10 shadow-sm">
+        <div className="w-full relative border-2 border-dashed border-emerald-400 dark:border-emerald-500/50 rounded-2xl sm:rounded-[2rem] p-6 sm:p-10 bg-emerald-50 dark:bg-emerald-900/10 hover:bg-emerald-100 dark:hover:bg-emerald-900/20 transition-all text-center mb-6 md:mb-10 shadow-sm">
            <input 
              type="file" 
              accept=".json"

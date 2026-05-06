@@ -287,26 +287,26 @@ export default function NewQuoteMatrix() {
     <div className={`min-h-screen ${theme.bgMain} ${theme.textMain} font-sans flex flex-col pb-48 transition-colors duration-300`}>
       
       {/* HEADER */}
-      <div className={`border-b ${theme.border} ${theme.bgPanel} p-4 flex flex-col md:flex-row gap-4 justify-between items-center z-40 sticky top-0 shadow-sm transition-colors duration-300`}>
-        <div className="flex items-center gap-4">
-          <button onClick={() => router.back()} className={`text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-lg border transition-colors ${isLightMode ? 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200' : 'bg-black border-slate-800 text-slate-400 hover:text-white'}`}>
+      <div className={`border-b ${theme.border} ${theme.bgPanel} p-3 sm:p-4 flex flex-col md:flex-row gap-3 md:gap-4 justify-between items-stretch md:items-center z-40 sticky top-0 shadow-sm transition-colors duration-300`}>
+        <div className="flex items-center gap-3 md:gap-4">
+          <button onClick={() => router.back()} className={`text-[11px] sm:text-[9px] font-black uppercase tracking-widest px-4 py-2.5 sm:py-2 rounded-lg border transition-colors min-h-[44px] sm:min-h-0 active:scale-95 shrink-0 ${isLightMode ? 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200' : 'bg-black border-slate-800 text-slate-400 hover:text-white'}`}>
              ← Back
           </button>
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-0">
             <h1 className={`text-xl font-black uppercase tracking-tighter leading-none italic ${theme.textStrong}`}>YAYA <span className="text-sky-500">MATRIX</span></h1>
-            <span className={`text-[8px] font-black ${theme.textMuted} uppercase tracking-widest`}>Rapid Quote Builder</span>
+            <span className={`text-[9px] sm:text-[8px] font-black ${theme.textMuted} uppercase tracking-widest`}>Rapid Quote Builder</span>
           </div>
         </div>
-        
-        <div className="flex items-center gap-3">
-            <button onClick={toggleTheme} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border font-black text-[9px] uppercase tracking-widest transition-colors ${isLightMode ? 'bg-slate-200 border-slate-300 text-slate-800' : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'}`}>
-                {isLightMode ? '🌙 Dark' : '☀️ Light'}
+
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <button onClick={toggleTheme} className={`flex items-center gap-2 px-3 py-2.5 sm:py-1.5 rounded-lg border font-black text-[11px] sm:text-[9px] uppercase tracking-widest transition-colors min-h-[44px] sm:min-h-0 active:scale-95 ${isLightMode ? 'bg-slate-200 border-slate-300 text-slate-800' : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'}`}>
+                {isLightMode ? '🌙' : '☀️'}<span className="hidden sm:inline ml-1">{isLightMode ? 'Dark' : 'Light'}</span>
             </button>
-            <button type="button" onClick={() => addLineItem("apparel")} className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors border border-sky-500 bg-sky-600 text-white hover:bg-sky-500 shadow-sm whitespace-nowrap`}>
-                + Add Apparel
+            <button type="button" onClick={() => addLineItem("apparel")} className={`flex-1 md:flex-none px-4 py-2.5 sm:py-2 rounded-lg text-[11px] sm:text-[9px] font-black uppercase tracking-widest transition-colors border border-sky-500 bg-sky-600 text-white hover:bg-sky-500 shadow-sm whitespace-nowrap min-h-[44px] sm:min-h-0 active:scale-95`}>
+                + Apparel
             </button>
-            <button type="button" onClick={() => addLineItem("general")} className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors border border-indigo-500 bg-indigo-600 text-white hover:bg-indigo-500 shadow-sm whitespace-nowrap`}>
-                + Add General Item
+            <button type="button" onClick={() => addLineItem("general")} className={`flex-1 md:flex-none px-4 py-2.5 sm:py-2 rounded-lg text-[11px] sm:text-[9px] font-black uppercase tracking-widest transition-colors border border-indigo-500 bg-indigo-600 text-white hover:bg-indigo-500 shadow-sm whitespace-nowrap min-h-[44px] sm:min-h-0 active:scale-95`}>
+                + Item
             </button>
         </div>
       </div>
