@@ -467,6 +467,13 @@ type WriteOp =
   | { kind: "upsert"; table: string; payload: any; onConflict: string }
   | { kind: "delete"; table: string; id: string };
 
+// Phase E side-panel types — Notes / Team / Machines / All-day chips.
+// Persisted to localStorage now; Phase F migrates Team + Machines to
+// Supabase (notes + all-day stay client-local since they're personal).
+type TeamMember = { id: string; name: string; start: string; end: string; status: "available" | "busy" | "off" };
+type Machine    = { id: string; name: string; status: "available" | "in-use"; note?: string };
+type AllDayItem = { id: string; label: string; color: "sky" | "violet" | "amber" | "emerald" | "rose" };
+
 // ─── HELPERS ──────────────────────────────────────────────────────────────────────
 const todayISO   = () => new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in local TZ
 const yesterdayISO = () => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toLocaleDateString("en-CA"); };
@@ -616,6 +623,52 @@ export default function MyDayPage() {
   // UI state
   const [captureInput, setCaptureInput] = useState("");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  // ─── PHASE E STATE — Notes / Team / Machines / All-day (localStorage) ──
+  // All four panels round-trip through localStorage so they survive page
+  // reloads. Phase F will move team_members and machines into Supabase
+  // tables when the user gives the green light on the schema.
+  // Type definitions live at module scope (above) so other components
+  // can also reference them.
+  const DEFAULT_MACHINES: Machine[] = useMemo(() => [
+    { id: "dtf1",   name: "DTF Printer 1",       status: "available" },
+    { id: "dtf2",   name: "DTF Printer 2",       status: "available" },
+    { id: "hp1",    name: "Heat Press #1",       status: "available" },
+    { id: "hp2",    name: "Heat Press #2",       status: "available" },
+    { id: "embr",   name: "Embroidery Machine",  status: "available" },
+    { id: "screen", name: "Screen Press 4-Color", status: "available" },
+  ], []);
+
+  // Per-date stores keyed by selectedDate
+  const [notesAll, setNotesAll] = useState<Record<string, string[]>>(() => {
+    if (typeof window === "undefined") return {};
+    try { return JSON.parse(localStorage.getItem("yaya-myday-notes") || "{}"); } catch { return {}; }
+  });
+  useEffect(() => { try { localStorage.setItem("yaya-myday-notes", JSON.stringify(notesAll)); } catch {} }, [notesAll]);
+
+  const [allDayMap, setAllDayMap] = useState<Record<string, AllDayItem[]>>(() => {
+    if (typeof window === "undefined") return {};
+    try { return JSON.parse(localStorage.getItem("yaya-myday-allday") || "{}"); } catch { return {}; }
+  });
+  useEffect(() => { try { localStorage.setItem("yaya-myday-allday", JSON.stringify(allDayMap)); } catch {} }, [allDayMap]);
+
+  // Global stores
+  const [team, setTeam] = useState<TeamMember[]>(() => {
+    if (typeof window === "undefined") return [];
+    try { return JSON.parse(localStorage.getItem("yaya-myday-team") || "[]"); } catch { return []; }
+  });
+  useEffect(() => { try { localStorage.setItem("yaya-myday-team", JSON.stringify(team)); } catch {} }, [team]);
+
+  const [machines, setMachines] = useState<Machine[]>(() => {
+    if (typeof window === "undefined") return DEFAULT_MACHINES;
+    try { const raw = localStorage.getItem("yaya-myday-machines"); return raw ? JSON.parse(raw) : DEFAULT_MACHINES; } catch { return DEFAULT_MACHINES; }
+  });
+  useEffect(() => { try { localStorage.setItem("yaya-myday-machines", JSON.stringify(machines)); } catch {} }, [machines]);
+
+  const notes = notesAll[selectedDate] || [];
+  const setNotes = (next: string[]) => setNotesAll(prev => ({ ...prev, [selectedDate]: next }));
+  const allDay = allDayMap[selectedDate] || [];
+  const setAllDay = (next: AllDayItem[]) => setAllDayMap(prev => ({ ...prev, [selectedDate]: next }));
+
   // ─── SELECTED-JOB STATE (right column) ───────────────────────────────────
   // Single id to drive the "Selected Job Details" panel in col 4. When the
   // user clicks any calendar card / agenda row, this gets set; when null
@@ -1683,11 +1736,43 @@ export default function MyDayPage() {
           {/* Stats — always visible */}
           <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
             <div className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500 mb-3">Day Stats</div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <Stat label="Tasks" value={String(totalToday)} />
               <Stat label="Done" value={String(completedToday)} accent="emerald" />
-              <Stat label="Hours" value={(tasks.reduce((s, t) => s + (t.duration_minutes || 0), 0) / 60).toFixed(1)} accent="sky" />
+              <Stat label="Hours" value={scheduledHrs.toFixed(1)} accent="sky" />
+              <Stat label="Util %" value={`${utilizationPct}%`} accent="emerald" />
             </div>
+          </div>
+
+          {/* Notes & Reminders — local to the device, per-day */}
+          <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">Notes & Reminders</div>
+              <button
+                onClick={() => {
+                  const txt = prompt("New note:");
+                  if (txt && txt.trim()) setNotes([...notes, txt.trim()]);
+                }}
+                className="text-[9px] font-black uppercase tracking-widest text-sky-500 hover:text-sky-600"
+              >+ Add</button>
+            </div>
+            {notes.length === 0 ? (
+              <div className="text-[11px] text-slate-400 dark:text-slate-500 text-center py-2">No notes for today</div>
+            ) : (
+              <ul className="flex flex-col gap-1.5">
+                {notes.map((n, i) => (
+                  <li key={i} className="group flex items-start gap-2 text-[11px]">
+                    <span className="text-amber-500 shrink-0">•</span>
+                    <span className="flex-1 text-slate-700 dark:text-slate-300">{n}</span>
+                    <button
+                      onClick={() => setNotes(notes.filter((_, j) => j !== i))}
+                      className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-500 text-[10px] shrink-0"
+                      title="Remove note"
+                    >×</button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 
@@ -1719,6 +1804,42 @@ export default function MyDayPage() {
                 <div className="text-[9px] font-black text-slate-400">{scheduledTasks.length} scheduled</div>
               </div>
             </div>
+
+            {/* ALL-DAY ROW — non-time-blocked items (artwork approvals,
+                inventory counts, maintenance windows, …). Stored
+                per-date in localStorage. */}
+            {(allDay.length > 0 || timelineView === "calendar") && (
+              <div className="flex items-center gap-2 mb-3 flex-wrap min-h-[28px]">
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 shrink-0">All Day</span>
+                {allDay.map(item => {
+                  const colorCls = item.color === "sky"     ? "bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/30"
+                                 : item.color === "violet"  ? "bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/30"
+                                 : item.color === "amber"   ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                                 : item.color === "emerald" ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                                                            : "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30";
+                  return (
+                    <span key={item.id} className={`group flex items-center gap-1.5 px-2 py-1 rounded-md border text-[10px] font-black uppercase tracking-widest ${colorCls}`}>
+                      {item.label}
+                      <button
+                        onClick={() => setAllDay(allDay.filter(x => x.id !== item.id))}
+                        className="opacity-0 group-hover:opacity-100 hover:opacity-100 text-current/60"
+                      >×</button>
+                    </span>
+                  );
+                })}
+                <button
+                  onClick={() => {
+                    const label = prompt("All-day item label?");
+                    if (!label?.trim()) return;
+                    const colors: AllDayItem["color"][] = ["sky", "violet", "amber", "emerald", "rose"];
+                    const color = colors[allDay.length % colors.length];
+                    setAllDay([...allDay, { id: Math.random().toString(36).slice(2, 9), label: label.trim(), color }]);
+                  }}
+                  className="px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-sky-500 border border-dashed border-slate-300 dark:border-slate-700"
+                >+ Add</button>
+              </div>
+            )}
+
             <Timeline
               view={timelineView}
               tasks={scheduledTasks}
@@ -1819,11 +1940,65 @@ export default function MyDayPage() {
               );
             })()}
           </PanelShell>
-          <PanelShell title="Team Availability">
-            <div className="text-[11px] text-slate-400 dark:text-slate-500">Phase E</div>
+          <PanelShell title="Team Availability" badge={String(team.filter(m => m.status === "available").length)} accent="emerald">
+            <ul className="flex flex-col gap-2">
+              {team.map(m => (
+                <li key={m.id} className="flex items-center gap-2">
+                  <div className="shrink-0 w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-600 dark:text-slate-300">
+                    {m.name.split(/\s+/).map(s => s[0]).slice(0, 2).join("").toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[11px] font-bold text-slate-900 dark:text-slate-100 truncate">{m.name}</div>
+                    <div className="text-[9px] text-slate-500">{m.start} – {m.end}</div>
+                  </div>
+                  <button
+                    onClick={() => setTeam(team.map(x => x.id === m.id ? { ...x, status: x.status === "available" ? "busy" : x.status === "busy" ? "off" : "available" } : x))}
+                    className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${
+                      m.status === "available" ? "bg-emerald-500/15 text-emerald-500" :
+                      m.status === "busy"      ? "bg-amber-500/15 text-amber-500" :
+                                                  "bg-slate-200 dark:bg-slate-800 text-slate-500"
+                    }`}
+                  >
+                    {m.status}
+                  </button>
+                  <button
+                    onClick={() => setTeam(team.filter(x => x.id !== m.id))}
+                    className="text-slate-400 hover:text-rose-500 text-[10px]"
+                    title="Remove"
+                  >×</button>
+                </li>
+              ))}
+              <li>
+                <button
+                  onClick={() => {
+                    const name = prompt("Team member name?");
+                    if (!name?.trim()) return;
+                    const start = prompt("Start time (HH:MM, 24h)?", "08:00") || "08:00";
+                    const end = prompt("End time (HH:MM, 24h)?", "17:00") || "17:00";
+                    setTeam([...team, { id: Math.random().toString(36).slice(2, 9), name: name.trim(), start, end, status: "available" }]);
+                  }}
+                  className="w-full text-[10px] font-black uppercase tracking-widest text-sky-500 hover:text-sky-600 py-1.5 border border-dashed border-slate-300 dark:border-slate-700 rounded-md mt-1"
+                >+ Add Team Member</button>
+              </li>
+            </ul>
           </PanelShell>
-          <PanelShell title="Machine Schedule">
-            <div className="text-[11px] text-slate-400 dark:text-slate-500">Phase E</div>
+
+          <PanelShell title="Machine Schedule" badge={String(machines.filter(m => m.status === "available").length)} accent="emerald">
+            <ul className="flex flex-col gap-1.5">
+              {machines.map(m => (
+                <li key={m.id} className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-slate-900 dark:text-slate-100 truncate flex-1">{m.name}</span>
+                  <button
+                    onClick={() => setMachines(machines.map(x => x.id === m.id ? { ...x, status: x.status === "available" ? "in-use" : "available" } : x))}
+                    className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded shrink-0 ${
+                      m.status === "available" ? "bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500/25" : "bg-amber-500/15 text-amber-500 hover:bg-amber-500/25"
+                    }`}
+                  >
+                    {m.status === "available" ? "Available" : "In Use"}
+                  </button>
+                </li>
+              ))}
+            </ul>
           </PanelShell>
         </div>
 
